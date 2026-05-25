@@ -27,6 +27,7 @@ npm run test:app
 	- `ImageFilesSection`、`PdfFilesSection`、`WordFilesSection` 的列表交互与批量操作事件路由。
 	- `PdfEditor` 的页删除、页抽取与“禁止删除全部页面”行为。
 	- `gemini.ts` 的运行时配置加载、缓存与客户端创建逻辑。
+	- `server.ts` 中压缩命令生成、压缩等级映射与运行时配置读取所依赖的服务端纯函数。
 
 兼容性说明：`npm run test:ui` 目前仍保留为 `npm run test:app` 的别名，方便沿用旧命令。
 

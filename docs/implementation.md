@@ -91,3 +91,10 @@ Modal --> User: 关闭增强弹窗
 2. 云端部署可以只在平台环境变量里配置 `GEMINI_API_KEY`，无需为了替换 Key 再修改前端代码。
 
 同样地，图片 OCR 的 Gemini 调用也只会在用户真正触发该能力时初始化；若本地没有配置 `.env` 中的 `GEMINI_API_KEY`，界面会显示包含 Google AI Studio 申请地址、本地 `.env` 配置方式和云端环境变量配置方式的帮助提示，而不是让主应用白屏。更多详情参考 `docs.md` 或官方仓库文档。
+
+最近一轮结构整理中，`server.ts` 里原本内联的部分字符串式逻辑也被抽到了独立服务端模块：
+
+1. `[src/server/runtime-config.ts](../src/server/runtime-config.ts)` 统一负责运行时 Gemini 配置读取与裁剪，避免环境变量读取分散在路由中。
+2. `[src/server/compression.ts](../src/server/compression.ts)` 负责 PDF 压缩等级映射、压缩任务 ID 生成以及 Ghostscript 命令拼装。
+
+这样一来，`server.ts` 主要保留 Express 路由与请求流转，而可预测、可复用的纯逻辑则能通过自动化测试直接验证。

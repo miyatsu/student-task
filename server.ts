@@ -9,6 +9,13 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import {
+  buildGhostscriptCompressionCommand,
+  createCompressionJobId,
+  resolvePdfCompressionSettings,
+} from "./src/server/compression.ts";
+import { readRuntimeConfig } from "./src/server/runtime-config.ts";
+
 dotenv.config({ quiet: true });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,9 +40,7 @@ async function startServer() {
 
   app.get("/api/runtime-config", (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.json({
-      geminiApiKey: process.env.GEMINI_API_KEY?.trim() || "",
-    });
+    res.json(readRuntimeConfig());
   });
 
   const jobs = new Map<string, { status: string, outputPath: string, inputPath: string, error?: string }>();
@@ -45,17 +50,10 @@ async function startServer() {
       return res.status(400).json({ error: "No PDF file uploaded" });
     }
 
-    const { level } = req.body;
-    let pdfSettings = "/ebook"; // default to medium quality
-    
-    if (level === "low") {
-      pdfSettings = "/screen"; // lowest quality, smallest file
-    } else if (level === "high") {
-      pdfSettings = "/printer"; // highest quality, largest file
-    }
+    const pdfSettings = resolvePdfCompressionSettings(req.body.level);
 
     const inputPath = req.file.path;
-    const jobId = Date.now() + "-" + Math.random().toString(36).substring(7);
+    const jobId = createCompressionJobId();
     const outputPath = path.join(uploadDir, `compressed-${jobId}.pdf`);
 
     jobs.set(jobId, { status: "processing", inputPath, outputPath });
@@ -66,7 +64,11 @@ async function startServer() {
       try {
         // Run Ghostscript to compress the PDF
         // Subsample downsampling is much faster than default Bicubic
-        const command = `gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=${pdfSettings} -dColorImageDownsampleType=/Subsample -dGrayImageDownsampleType=/Subsample -dMonoImageDownsampleType=/Subsample -dNOPAUSE -dQUIET -dBATCH -sOutputFile="${outputPath}" "${inputPath}"`;
+        const command = buildGhostscriptCompressionCommand({
+          inputPath,
+          outputPath,
+          pdfSettings,
+        });
         
         const { exec } = await import("child_process");
         const { promisify } = await import("util");
