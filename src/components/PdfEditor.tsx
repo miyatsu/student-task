@@ -4,17 +4,9 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import { PDFDocument } from 'pdf-lib';
 import { X, Trash2, FileOutput, CheckSquare, Square, Loader2 } from 'lucide-react';
+import type { AppFile } from '../features/files';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
-
-interface AppFile {
-  id: string;
-  file: File;
-  name: string;
-  size: number;
-  type: 'pdf' | 'image' | 'word';
-  previewUrl?: string;
-}
 
 interface PdfEditorProps {
   file: AppFile;

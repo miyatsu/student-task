@@ -13,6 +13,7 @@
     "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
+    "test": "node --import tsx --test src/features/files/file-utils.test.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

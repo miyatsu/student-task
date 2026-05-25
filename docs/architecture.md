@@ -36,6 +36,11 @@
    - 图像超级解析：`ImageEnhanceModal`。
    - 通用外脑组件：`AiAssistant`。
 
+3. **共享文件领域模块**
+  - `src/features/files/types.ts`：定义 `AppFile`、排序配置等跨组件共享类型，避免组件反向依赖 `App.tsx`。
+  - `src/features/files/file-utils.ts`：封装文件分类、排序、选择切换、重命名、复制、批量删除和 Zip 命名冲突处理等纯逻辑。
+  - `src/features/files/file-utils.test.ts`：为上述纯逻辑提供自动化回归测试。
+
 ## 3. 本地架构视图 
 *(C4 模型的容器级架构)*
 

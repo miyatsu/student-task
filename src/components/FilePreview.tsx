@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ExternalLink } from 'lucide-react';
-import { AppFile } from '../App';
 import * as mammoth from 'mammoth';
+import type { AppFile } from '../features/files';
 
 interface FilePreviewProps {
   file: AppFile | null;

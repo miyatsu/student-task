@@ -8,28 +8,29 @@ import AiAssistant from './components/AiAssistant';
 import ImageEnhanceModal from './components/ImageEnhanceModal';
 import FilePreview from './components/FilePreview';
 import imageCompression from 'browser-image-compression';
+import {
+  AppFile,
+  SortConfig,
+  SortKey,
+  duplicateAppFile,
+  formatBytes,
+  getNextSortConfig,
+  isSupportedFile,
+  partitionAppFiles,
+  removeAppFile,
+  removeSelectedFiles,
+  renameAppFile,
+  resolveZipEntryNames,
+  selectFilesByIds,
+  sortAppFiles,
+  toggleAllSelection,
+  toggleSelection,
+} from './features/files';
 import { createGeminiClient, geminiSetupGuideText } from './lib/gemini';
 
 import * as mammoth from 'mammoth';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
-
-export interface AppFile {
-  id: string;
-  file: File;
-  name: string;
-  size: number;
-  type: 'pdf' | 'image' | 'word';
-  previewUrl?: string;
-}
-
-export type SortKey = 'name' | 'date' | 'size';
-export type SortOrder = 'asc' | 'desc';
-
-export interface SortConfig {
-  key: SortKey;
-  order: SortOrder;
-}
 
 export default function App() {
   const [pdfFiles, setPdfFiles] = useState<AppFile[]>([]);
@@ -70,43 +71,17 @@ export default function App() {
   }, []);
 
   const processFiles = useCallback((newFiles: FileList | File[]) => {
-    const validFiles = Array.from(newFiles).filter(file => 
-      file.type === 'application/pdf' || 
-      file.type === 'image/png' || 
-      file.type === 'image/jpeg' || 
-      file.type === 'image/jpg' ||
-      file.name.endsWith('.doc') ||
-      file.name.endsWith('.docx') ||
-      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      file.type === 'application/msword'
-    );
+    const validFiles = Array.from(newFiles).filter(isSupportedFile);
     
     if (validFiles.length === 0) {
       alert('Please upload only PDF, Word, or Image (PNG, JPG, JPEG) files.');
       return;
     }
 
-    const newPdfs: AppFile[] = [];
-    const newImgs: AppFile[] = [];
-    const newWords: AppFile[] = [];
-
-    validFiles.forEach(file => {
-      let type: 'pdf' | 'image' | 'word' = 'image';
-      if (file.type === 'application/pdf') type = 'pdf';
-      else if (file.name.endsWith('.doc') || file.name.endsWith('.docx') || file.type.includes('word')) type = 'word';
-
-      const appFile: AppFile = {
-        id: Math.random().toString(36).substring(7),
-        file,
-        name: file.name,
-        size: file.size,
-        type,
-        previewUrl: type === 'image' ? URL.createObjectURL(file) : undefined
-      };
-      if (appFile.type === 'pdf') newPdfs.push(appFile);
-      else if (appFile.type === 'word') newWords.push(appFile);
-      else newImgs.push(appFile);
-    });
+    const groupedFiles = partitionAppFiles(validFiles);
+    const newPdfs = groupedFiles.pdf;
+    const newImgs = groupedFiles.image;
+    const newWords = groupedFiles.word;
 
     if (newPdfs.length > 0) {
       setPdfFiles(prev => [...prev, ...newPdfs]);
@@ -139,23 +114,23 @@ export default function App() {
     }
   }, [processFiles]);
 
-  const removeFile = (id: string, type: 'pdf' | 'image' | 'word') => {
+  const removeFile = (id: string, type: AppFile['type']) => {
     if (type === 'pdf') {
-      setPdfFiles(prev => prev.filter(f => f.id !== id));
+      setPdfFiles(prev => removeAppFile(prev, id));
       setSelectedPdfIds(prev => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
     } else if (type === 'word') {
-      setWordFiles(prev => prev.filter(f => f.id !== id));
+      setWordFiles(prev => removeAppFile(prev, id));
       setSelectedWordIds(prev => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
     } else {
-      setImageFiles(prev => prev.filter(f => f.id !== id));
+      setImageFiles(prev => removeAppFile(prev, id));
       setSelectedImageIds(prev => {
         const next = new Set(prev);
         next.delete(id);
@@ -164,36 +139,23 @@ export default function App() {
     }
   };
 
-  const handleSort = (type: 'pdf' | 'image' | 'word', key: SortKey) => {
+  const handleSort = (type: AppFile['type'], key: SortKey) => {
     let currentConfig: SortConfig | null = null;
     if (type === 'pdf') currentConfig = pdfSort;
     else if (type === 'image') currentConfig = imageSort;
     else if (type === 'word') currentConfig = wordSort;
 
-    let newOrder: SortOrder = 'asc';
-    if (currentConfig && currentConfig.key === key) {
-      newOrder = currentConfig.order === 'asc' ? 'desc' : 'asc';
-    }
-
-    const newConfig: SortConfig = { key, order: newOrder };
-
-    const sortFn = (a: AppFile, b: AppFile) => {
-      let comparison = 0;
-      if (key === 'name') comparison = a.name.localeCompare(b.name);
-      else if (key === 'size') comparison = a.size - b.size;
-      else if (key === 'date') comparison = a.file.lastModified - b.file.lastModified;
-      return newOrder === 'asc' ? comparison : -comparison;
-    };
+    const newConfig = getNextSortConfig(currentConfig, key);
 
     if (type === 'pdf') {
       setPdfSort(newConfig);
-      setPdfFiles(prev => [...prev].sort(sortFn));
+      setPdfFiles(prev => sortAppFiles(prev, newConfig));
     } else if (type === 'image') {
       setImageSort(newConfig);
-      setImageFiles(prev => [...prev].sort(sortFn));
+      setImageFiles(prev => sortAppFiles(prev, newConfig));
     } else if (type === 'word') {
       setWordSort(newConfig);
-      setWordFiles(prev => [...prev].sort(sortFn));
+      setWordFiles(prev => sortAppFiles(prev, newConfig));
     }
   };
 
@@ -234,45 +196,27 @@ export default function App() {
     setEditingName(file.name);
   };
 
-  const saveRename = (id: string, type: 'pdf' | 'image' | 'word') => {
+  const saveRename = (id: string, type: AppFile['type']) => {
     if (!editingName.trim()) {
       setEditingFileId(null);
       return;
     }
 
-    const renameFile = (f: AppFile): AppFile => {
-      if (f.id === id) {
-        // Create new File so that downloading it uses the new name
-        const newFile = new File([f.file], editingName, { type: f.file.type });
-        return { ...f, file: newFile, name: editingName };
-      }
-      return f;
-    };
+    const nextName = editingName.trim();
+    const applyRename = (file: AppFile) => file.id === id ? renameAppFile(file, nextName) : file;
 
     if (type === 'pdf') {
-      setPdfFiles(prev => prev.map(renameFile));
+      setPdfFiles(prev => prev.map(applyRename));
     } else if (type === 'word') {
-      setWordFiles(prev => prev.map(renameFile));
+      setWordFiles(prev => prev.map(applyRename));
     } else {
-      setImageFiles(prev => prev.map(renameFile));
+      setImageFiles(prev => prev.map(applyRename));
     }
     setEditingFileId(null);
   };
 
-  const duplicateFile = (file: AppFile, type: 'pdf' | 'image' | 'word') => {
-    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-    const extension = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
-    const newName = `${baseName}-copy${extension}`;
-    
-    const newFileObj = new File([file.file], newName, { type: file.file.type });
-
-    const newAppFile: AppFile = {
-      ...file,
-      id: Math.random().toString(36).substring(7),
-      name: newName,
-      file: newFileObj,
-      previewUrl: type === 'image' && file.previewUrl ? URL.createObjectURL(newFileObj) : undefined
-    };
+  const duplicateFile = (file: AppFile, type: AppFile['type']) => {
+    const newAppFile = duplicateAppFile(file);
 
     if (type === 'pdf') {
       setPdfFiles(prev => [...prev, newAppFile]);
@@ -319,73 +263,46 @@ export default function App() {
   };
 
   const toggleWordSelection = (id: string) => {
-    setSelectedWordIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedWordIds(prev => toggleSelection(prev, id));
   };
 
   const togglePdfSelection = (id: string) => {
-    setSelectedPdfIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedPdfIds(prev => toggleSelection(prev, id));
   };
 
   const toggleImageSelection = (id: string) => {
-    setSelectedImageIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedImageIds(prev => toggleSelection(prev, id));
   };
 
   const toggleAllPdfs = () => {
-    if (selectedPdfIds.size === pdfFiles.length) {
-      setSelectedPdfIds(new Set());
-    } else {
-      setSelectedPdfIds(new Set(pdfFiles.map(f => f.id)));
-    }
+    setSelectedPdfIds(prev => toggleAllSelection(prev, pdfFiles));
   };
 
   const toggleAllWords = () => {
-    if (selectedWordIds.size === wordFiles.length) {
-      setSelectedWordIds(new Set());
-    } else {
-      setSelectedWordIds(new Set(wordFiles.map(f => f.id)));
-    }
+    setSelectedWordIds(prev => toggleAllSelection(prev, wordFiles));
   };
 
   const deleteSelectedWords = () => {
-    setWordFiles(prev => prev.filter(f => !selectedWordIds.has(f.id)));
+    setWordFiles(prev => removeSelectedFiles(prev, selectedWordIds));
     setSelectedWordIds(new Set());
   };
 
   const toggleAllImages = () => {
-    if (selectedImageIds.size === imageFiles.length) {
-      setSelectedImageIds(new Set());
-    } else {
-      setSelectedImageIds(new Set(imageFiles.map(f => f.id)));
-    }
+    setSelectedImageIds(prev => toggleAllSelection(prev, imageFiles));
   };
 
   const deleteSelectedImages = () => {
-    setImageFiles(prev => prev.filter(f => !selectedImageIds.has(f.id)));
+    setImageFiles(prev => removeSelectedFiles(prev, selectedImageIds));
     setSelectedImageIds(new Set());
   };
 
   const deleteSelectedPdfs = () => {
-    setPdfFiles(prev => prev.filter(f => !selectedPdfIds.has(f.id)));
+    setPdfFiles(prev => removeSelectedFiles(prev, selectedPdfIds));
     setSelectedPdfIds(new Set());
   };
 
   const convertSelectedWords = async () => {
-    const selected = wordFiles.filter(f => selectedWordIds.has(f.id));
+    const selected = selectFilesByIds(wordFiles, selectedWordIds);
     if (selected.length === 0) return;
 
     setIsConverting(true);
@@ -445,7 +362,7 @@ export default function App() {
   };
 
   const convertSelectedImages = async () => {
-    const selectedImgs = imageFiles.filter(f => selectedImageIds.has(f.id));
+    const selectedImgs = selectFilesByIds(imageFiles, selectedImageIds);
     if (selectedImgs.length === 0) return;
 
     setIsConverting(true);
@@ -492,7 +409,7 @@ export default function App() {
   };
 
   const compressSelectedImages = async (level: 'low' | 'medium' | 'high') => {
-    const selectedImgs = imageFiles.filter(f => selectedImageIds.has(f.id));
+    const selectedImgs = selectFilesByIds(imageFiles, selectedImageIds);
     if (selectedImgs.length === 0) return;
 
     setIsCompressing(true);
@@ -541,7 +458,7 @@ export default function App() {
   };
 
   const compressSelectedPdfs = async (level: 'low' | 'medium' | 'high') => {
-    const selectedPdfs = pdfFiles.filter(f => selectedPdfIds.has(f.id));
+    const selectedPdfs = selectFilesByIds(pdfFiles, selectedPdfIds);
     if (selectedPdfs.length === 0) return;
 
     setIsCompressing(true);
@@ -604,7 +521,7 @@ export default function App() {
   };
 
   const mergeSelectedPdfs = async () => {
-    const selectedPdfs = pdfFiles.filter(f => selectedPdfIds.has(f.id));
+    const selectedPdfs = selectFilesByIds(pdfFiles, selectedPdfIds);
     if (selectedPdfs.length < 2) return;
 
     setIsMerging(true);
@@ -642,9 +559,9 @@ export default function App() {
   };
 
   const downloadSelected = async () => {
-    const selectedPdfs = pdfFiles.filter(f => selectedPdfIds.has(f.id));
-    const selectedImgs = imageFiles.filter(f => selectedImageIds.has(f.id));
-    const selectedWords = wordFiles.filter(f => selectedWordIds.has(f.id));
+    const selectedPdfs = selectFilesByIds(pdfFiles, selectedPdfIds);
+    const selectedImgs = selectFilesByIds(imageFiles, selectedImageIds);
+    const selectedWords = selectFilesByIds(wordFiles, selectedWordIds);
     const allSelected = [...selectedPdfs, ...selectedImgs, ...selectedWords];
 
     if (allSelected.length === 0) return;
@@ -665,23 +582,9 @@ export default function App() {
     setIsDownloading(true);
     try {
       const zip = new JSZip();
-      
-      // Handle potential duplicate names in zip
-      const nameCounts = new Map<string, number>();
-      
-      allSelected.forEach(f => {
-        let finalName = f.name;
-        if (nameCounts.has(finalName)) {
-          const count = nameCounts.get(finalName)! + 1;
-          nameCounts.set(finalName, count);
-          const nameParts = finalName.split('.');
-          const ext = nameParts.pop();
-          const base = nameParts.join('.');
-          finalName = `${base} (${count}).${ext}`;
-        } else {
-          nameCounts.set(finalName, 1);
-        }
-        zip.file(finalName, f.file);
+
+      resolveZipEntryNames(allSelected).forEach(({ file, name }) => {
+        zip.file(name, file.file);
       });
       
       const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -699,15 +602,6 @@ export default function App() {
     } finally {
       setIsDownloading(false);
     }
-  };
-
-  const formatBytes = (bytes: number, decimals = 2) => {
-    if (!+bytes) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
   };
 
   const handleExtractText = async (appFile: AppFile) => {

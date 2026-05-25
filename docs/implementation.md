@@ -16,6 +16,8 @@ export interface AppFile {
 }
 ```
 
+在最近一轮重构中，这些共享类型已经迁移到 `[src/features/files/types.ts](../src/features/files/types.ts)`，从而让 `AiAssistant`、`FilePreview`、`ImageEnhanceModal`、`PdfEditor` 等组件不再反向依赖 `App.tsx` 这个大文件。
+
 ## 2. 交互操作
 
 ### 2.1 基于拖拽的排序 (`@hello-pangea/dnd`)
@@ -27,6 +29,16 @@ export interface AppFile {
 
 ### 2.2 本地拷贝机制
 `duplicateFile` 功能实现非常直接。因全部文件缓存在浏览器的 RAM 中（File 对象），无需调用服务端，仅仅需要在逻辑上复制 `File` 的二进制片段并在列表末尾注入即可（重新分配一个不同的随机 `id` 和一个 `-copy` 为命名的逻辑名称）。
+
+当前这些与文件领域相关的纯逻辑已经集中到 `[src/features/files/file-utils.ts](../src/features/files/file-utils.ts)`，包括：
+
+1. 文件类型识别与分组
+2. 选择切换与全选/反选
+3. 排序配置推导与排序执行
+4. 文件重命名与复制
+5. Zip 导出时的重名消解
+
+这让 `App.tsx` 主要保留状态编排和 UI 交互流程，而把可单测的无副作用逻辑下沉到独立模块。
 
 <a id="ai-image-enhancement"></a>
 ## 3. UI无缝结合的 AI 本地放大器算法

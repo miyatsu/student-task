@@ -51,7 +51,9 @@ npm run build
 
 ## 5. 项目风格及代码提交
 在提交代码之前：
+- 请运行 `npm test` 以验证已抽离的纯逻辑模块没有发生行为回归。
 - 请运行 `npm run lint` 以检查可能的 TypeScript 类型语法错误以及未捕捉的反模式调用。
+- 如果本轮修改影响了前端运行逻辑或共享模块，请额外运行 `npm run build` 做一次打包验证。
 - 我们并未规定严苛的 Prettier 配置。然而由于使用了 TailwindCSS v4 的编译机制，请确保在新增 React Components 时合理使用 Utility classes 堆叠范式。对于具有逻辑复用属性的自定义钩子文件统一储存在对应的功能包下。
 
 ## 6. 添加环境变量

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Sparkles, Loader2, Bot, User } from 'lucide-react';
 import Markdown from 'react-markdown';
-import { AppFile } from '../App';
 import * as mammoth from 'mammoth';
+import type { AppFile } from '../features/files';
 import { createGeminiClient, geminiSetupGuideMarkdown, getGeminiApiKey, loadGeminiApiKey } from '../lib/gemini';
 
 interface Message {

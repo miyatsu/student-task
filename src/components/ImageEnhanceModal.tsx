@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check, Loader2 } from 'lucide-react';
-import { AppFile } from '../App';
 import Upscaler from 'upscaler';
+import type { AppFile } from '../features/files';
 
 interface ImageEnhanceModalProps {
   file: AppFile;
