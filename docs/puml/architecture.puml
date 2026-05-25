@@ -1,0 +1,38 @@
+@startuml
+skinparam componentStyle rectangle
+
+package "前端 (React + Vite + TailwindCSS)" {
+  [App.tsx (应用入口 & 状态管理)] as App
+  
+  package "核心组件" {
+    [PdfEditor (PDF操作界面)] as PdfEditor
+    [ImageEnhanceModal (AI图像增强)] as ImageEnhanceModal
+    [AiAssistant (AI文档对话)] as AiAssistant
+    [FilePreview (文件预览)] as FilePreview
+  }
+  
+  package "前端功能库" {
+    [pdf-lib (PDF处理模块)] as PDFLib
+    [upscaler + tfjs (本地推理大模型)] as TFJS
+    [@google/genai (Gemini AI API)] as GeminiAPI
+    [browser-image-compression] as ImageCompression
+  }
+}
+
+package "后端 (Express + TS)" {
+  [server.ts (API服务 & 前端代理)] as Backend
+}
+
+App --> PdfEditor
+App --> ImageEnhanceModal
+App --> AiAssistant
+App --> FilePreview
+
+PdfEditor --> PDFLib : PDF操作
+ImageEnhanceModal --> TFJS : 端侧图像增强
+AiAssistant --> GeminiAPI : 云端文档理解与对话
+App --> ImageCompression : 本地图片压缩
+
+App <--> Backend : 可选 API 调用
+
+@enduml
