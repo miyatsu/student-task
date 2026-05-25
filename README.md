@@ -19,7 +19,7 @@
 
 开发模式补充说明：`npm run dev` 默认监听 `http://localhost:3000`；如果 3000 已被占用，服务会自动切换到下一个可用端口，并在终端打印实际访问地址。
 
-仓库中的自动化回归测试通过 `npm test` 运行；另有一组开发期诊断与手工验证脚本位于 `scripts/experiments/`，按 `diagnostics/`、`manual/`、`spikes/` 分类保存，它们不会进入默认测试流水线。
+仓库中的自动化回归测试通过 `npm test` 运行，当前覆盖纯逻辑、文件列表 UI 回归、PDF 页操作以及 Gemini 运行时配置加载；另有一组开发期诊断与手工验证脚本位于 `scripts/experiments/`，按 `diagnostics/`、`manual/`、`spikes/` 分类保存，它们不会进入默认测试流水线。
 
 如果这是从 Google AI Studio 导出的项目，请额外注意：AI Studio 托管环境通常会替你注入 Gemini 所需的密钥；本地运行时如果没有在项目根目录配置 `.env` 中的 `GEMINI_API_KEY`，基础文件处理界面仍然可以正常打开，但 Gemini 聊天与基于 Gemini 的 OCR 能力会保持禁用并提示如何配置。
 

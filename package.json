@@ -13,9 +13,10 @@
     "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "test": "npm run test:logic && npm run test:ui",
+    "test": "npm run test:logic && npm run test:app",
     "test:logic": "node --import tsx --test src/features/files/file-utils.test.ts",
-    "test:ui": "vitest run",
+    "test:app": "vitest run",
+    "test:ui": "npm run test:app",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
