@@ -7,6 +7,7 @@ import PdfEditor from './components/PdfEditor';
 import AiAssistant from './components/AiAssistant';
 import ImageEnhanceModal from './components/ImageEnhanceModal';
 import FilePreview from './components/FilePreview';
+import HomeHero from './components/HomeHero';
 import imageCompression from 'browser-image-compression';
 import {
   AppFile,
@@ -767,11 +768,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 pb-32">
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <header className="mb-10 text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-900 mb-3">PDF & Image Tools</h1>
-          <p className="text-zinc-500 text-lg">Convert images to PDFs, compress, and merge multiple PDFs into one document.</p>
-        </header>
+      <div className="max-w-5xl mx-auto px-4 py-10 md:py-12">
+        <HomeHero />
 
         <main className="space-y-8">
           {conversionError && (
@@ -783,29 +781,40 @@ export default function App() {
 
           {/* Upload Zone */}
           <div
-            className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 ease-in-out cursor-pointer
+            className={`relative overflow-hidden border-2 border-dashed rounded-[1.75rem] p-10 text-center transition-all duration-200 ease-in-out cursor-pointer
               ${isDragging 
-                ? 'border-indigo-500 bg-indigo-50 scale-[1.02]' 
-                : 'border-zinc-300 bg-white hover:border-indigo-400 hover:bg-zinc-50'
+                ? 'border-sky-500 bg-sky-50 scale-[1.02]' 
+                : 'border-zinc-300 bg-white hover:border-sky-400 hover:bg-zinc-50'
               }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
           >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-sky-100/70 via-emerald-50/45 to-transparent" />
             <input
               type="file"
               multiple
-              accept="application/pdf,image/png,image/jpeg,image/jpg"
+              accept="application/pdf,image/png,image/jpeg,image/jpg,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               className="hidden"
               ref={fileInputRef}
               onChange={handleFileInput}
             />
-            <div className="mx-auto w-16 h-16 mb-4 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+            <div className="relative mx-auto w-16 h-16 mb-4 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 shadow-sm">
               <Upload className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Click to upload or drag and drop</h3>
-            <p className="text-zinc-500">Supports PDF, PNG, and JPG files</p>
+            <p className="relative text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Workspace Upload</p>
+            <h3 className="relative mt-3 text-2xl font-semibold text-zinc-900">Drop PDFs, images, or Word documents</h3>
+            <p className="relative mt-3 mx-auto max-w-2xl text-zinc-500 leading-7">
+              Mixed uploads are sorted automatically, so you can convert, edit, enhance, extract, analyze, and export from one place.
+            </p>
+            <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-zinc-500">
+              {['PDF', 'DOC / DOCX', 'PNG', 'JPG / JPEG'].map((item) => (
+                <span key={item} className="rounded-full border border-zinc-200 bg-white/85 px-3 py-1.5">
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
 
           <DragDropContext onDragEnd={onDragEnd}>
