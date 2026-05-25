@@ -36,8 +36,8 @@ npm install
 ```bash
 npm run dev
 ```
-此命令将触发 `package.json` 里的 `"tsx server.ts"`，同时挂载 Vite 中间件（在 Express 环境下），以便提供前后端联调并在修改文件后支持热模块替换（如果禁用则为刷新式开发机制）。
-此时您的控制台会打印绑定的端口。通常在浏览器输入 `http://localhost:3000` 即可直接访问应用。
+此命令将触发 `package.json` 里的 `"tsx server.ts"`，同时在同一个 Express HTTP Server 上挂载 Vite 中间件和 HMR WebSocket，以便提供前后端联调并在修改文件后支持热模块替换（如果禁用则为刷新式开发机制）。
+此时控制台会打印实际绑定的端口。默认优先使用 `http://localhost:3000`；如果该端口已被其他进程占用，开发服务器会自动顺延到下一个可用端口（如 `http://localhost:3001`），避免直接因端口冲突退出。
 
 ## 4. 前端打包与生产测试
 如需向线上服务器发布静态资产：
