@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Sparkles, Loader2, Bot, User } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import Markdown from 'react-markdown';
 import { AppFile } from '../App';
 import * as mammoth from 'mammoth';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+import { createGeminiClient, getGeminiApiKey, missingGeminiApiKeyMessage } from '../lib/gemini';
 
 interface Message {
   role: 'user' | 'model';
@@ -18,6 +16,7 @@ interface AiAssistantProps {
 }
 
 export default function AiAssistant({ files, onClose }: AiAssistantProps) {
+  const geminiConfigured = Boolean(getGeminiApiKey());
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -76,7 +75,7 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
   };
 
   const handleSend = async (text: string, isInitial = false) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !geminiConfigured) return;
 
     if (!isInitial) {
       setMessages(prev => [...prev, { role: 'user', text }]);
@@ -86,6 +85,11 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
     setIsStreaming(true);
 
     try {
+      const ai = createGeminiClient();
+      if (!ai) {
+        throw new Error(missingGeminiApiKeyMessage);
+      }
+
       const fileData = await getFilesBase64();
 
       let contents: any[] = [];
@@ -152,6 +156,12 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
   };
 
   useEffect(() => {
+    if (!geminiConfigured) {
+      setMessages([{ role: 'model', text: missingGeminiApiKeyMessage }]);
+      setIsInitializing(false);
+      return;
+    }
+
     // Initial prompt
     const initialPrompt = files.length > 1 
       ? `Please provide a brief summary of these ${files.length} documents/images.`
@@ -160,7 +170,7 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
         : "Please describe this image in detail.";
     handleSend(initialPrompt, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [files, geminiConfigured]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm p-4 sm:p-6">
@@ -248,13 +258,15 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={`Ask a question about ${files.length > 1 ? 'these documents' : 'this document'}...`}
-              disabled={isStreaming || isInitializing}
+              placeholder={geminiConfigured
+                ? `Ask a question about ${files.length > 1 ? 'these documents' : 'this document'}...`
+                : 'Configure GEMINI_API_KEY in .env to enable Gemini chat.'}
+              disabled={!geminiConfigured || isStreaming || isInitializing}
               className="w-full pl-5 pr-14 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:opacity-50 text-sm"
             />
             <button
               type="submit"
-              disabled={!input.trim() || isStreaming || isInitializing}
+              disabled={!geminiConfigured || !input.trim() || isStreaming || isInitializing}
               className="absolute right-2 p-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors"
             >
               <Send className="w-4 h-4" />
@@ -262,7 +274,7 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
           </form>
           <div className="text-center mt-3">
             <p className="text-[10px] text-zinc-400 font-medium tracking-wide uppercase">
-              Powered by Gemini 3.1 Pro
+              {geminiConfigured ? 'Powered by Gemini 3.1 Pro' : 'Gemini disabled until GEMINI_API_KEY is configured'}
             </p>
           </div>
         </div>

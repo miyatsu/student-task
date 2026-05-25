@@ -55,6 +55,10 @@ npm run build
 ## 6. 添加环境变量
 虽然前端代码绝大部分运行在客户端，但如果使用到了特定的云端功能（如 Gemini API 交互分析），则需要在项目根目录依据示例创建 `.env`文件配置后端参数。
 
+如果该项目来自 Google AI Studio 导出，请不要假设本地开发环境会自动继承 AI Studio 中的密钥注入。你需要在本机手动创建 `.env` 并填入可用的 `GEMINI_API_KEY`。
+
+未配置 `GEMINI_API_KEY` 时，应用主界面仍会正常启动；只有 Gemini 聊天和基于 Gemini 的图片 OCR 会在界面内提示“未配置”并保持不可用，不会再导致整页白屏。
+
 ```text
 # 示例：创建 .env
 GEMINI_API_KEY=your_actual_key_here

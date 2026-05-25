@@ -72,4 +72,6 @@ Modal --> User: 关闭增强弹窗
 ```
 
 ## 4. 其它特定扩展阅读
-本站集成了 Gemini 生成大模型，其实现在于 `[src/components/AiAssistant.tsx](../src/components/AiAssistant.tsx)`，底层使用 Google 官方发布的 Node/Web 兼容 GenAI SDK 支持流式上下文打印。更多详情参考 `docs.md` 或官方仓库文档。
+本站集成了 Gemini 生成大模型，其实现在于 `[src/components/AiAssistant.tsx](../src/components/AiAssistant.tsx)` 与 `[src/lib/gemini.ts](../src/lib/gemini.ts)`。底层使用 Google 官方发布的 Node/Web 兼容 GenAI SDK 支持流式上下文打印，并通过延迟初始化避免在本地缺失 `GEMINI_API_KEY` 时于模块加载阶段直接抛错。
+
+同样地，图片 OCR 的 Gemini 调用也只会在用户真正触发该能力时初始化；若本地没有配置 `.env` 中的 `GEMINI_API_KEY`，界面会显示配置提示，而不是让主应用白屏。更多详情参考 `docs.md` 或官方仓库文档。

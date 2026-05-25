@@ -3,12 +3,12 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { Upload, FileText, GripVertical, Trash2, Download, FileUp, Loader2, Image as ImageIcon, Edit2, Check, X, FileArchive, LayoutGrid, Sparkles, ScanText, ImagePlus, FileImage, Eye, RotateCw, Copy, ArrowUp, ArrowDown, Wand2 } from 'lucide-react';
 import { PDFDocument, PDFRawStream, PDFName } from 'pdf-lib';
 import JSZip from 'jszip';
-import { GoogleGenAI } from '@google/genai';
 import PdfEditor from './components/PdfEditor';
 import AiAssistant from './components/AiAssistant';
 import ImageEnhanceModal from './components/ImageEnhanceModal';
 import FilePreview from './components/FilePreview';
 import imageCompression from 'browser-image-compression';
+import { createGeminiClient, missingGeminiApiKeyMessage } from './lib/gemini';
 
 import * as mammoth from 'mammoth';
 // @ts-ignore
@@ -713,7 +713,12 @@ export default function App() {
   const handleExtractText = async (appFile: AppFile) => {
     setExtractingTextId(appFile.id);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const ai = createGeminiClient();
+      if (!ai) {
+        alert(missingGeminiApiKeyMessage);
+        return;
+      }
+
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(appFile.file);
