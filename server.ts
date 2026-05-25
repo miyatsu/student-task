@@ -2,10 +2,10 @@ import express from "express";
 import compression from "compression";
 import { createServer as createViteServer } from "vite";
 import multer from "multer";
-import { execSync } from "child_process";
+import { createServer as createHttpServer } from "http";
+import type { AddressInfo } from "net";
 import fs from "fs";
 import path from "path";
-import os from "os";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,8 +19,9 @@ const upload = multer({ dest: uploadDir });
 
 async function startServer() {
   const app = express();
+  const httpServer = createHttpServer(app);
   app.use(compression());
-  const PORT = 3000;
+  const preferredPort = Number.parseInt(process.env.PORT || "3000", 10);
 
   // API routes FIRST
   app.get("/api/health", (req, res) => {
@@ -225,7 +226,10 @@ async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: { server: httpServer },
+        hmr: process.env.DISABLE_HMR === "true" ? false : { server: httpServer },
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -237,9 +241,44 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  let activePort = preferredPort;
+
+  while (true) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const handleListening = () => {
+          httpServer.off("error", handleError);
+          resolve();
+        };
+
+        const handleError = (error: NodeJS.ErrnoException) => {
+          httpServer.off("listening", handleListening);
+          reject(error);
+        };
+
+        httpServer.once("listening", handleListening);
+        httpServer.once("error", handleError);
+        httpServer.listen(activePort, "0.0.0.0");
+      });
+
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EADDRINUSE") {
+        throw error;
+      }
+
+      activePort += 1;
+    }
+  }
+
+  const address = httpServer.address() as AddressInfo | null;
+  const boundPort = address?.port ?? activePort;
+
+  if (boundPort !== preferredPort) {
+    console.warn(`Port ${preferredPort} is busy, using http://localhost:${boundPort} instead.`);
+  }
+
+  console.log(`Server running on http://localhost:${boundPort}`);
 }
 
 startServer();
