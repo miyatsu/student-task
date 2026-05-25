@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Upload, FileText, GripVertical, Trash2, Download, FileUp, Loader2, Image as ImageIcon, Edit2, Check, X, FileArchive, LayoutGrid, Sparkles, ScanText, ImagePlus, FileImage, Eye, RotateCw, Copy, ArrowUp, ArrowDown, Wand2 } from 'lucide-react';
+import { DragDropContext, DropResult } from '@hello-pangea/dnd';
+import { Download, Loader2, Upload } from 'lucide-react';
 import { PDFDocument, PDFRawStream, PDFName } from 'pdf-lib';
 import JSZip from 'jszip';
 import PdfEditor from './components/PdfEditor';
@@ -13,7 +13,6 @@ import {
   SortConfig,
   SortKey,
   duplicateAppFile,
-  formatBytes,
   getNextSortConfig,
   isSupportedFile,
   partitionAppFiles,
@@ -26,6 +25,7 @@ import {
   toggleAllSelection,
   toggleSelection,
 } from './features/files';
+import { ImageFilesSection, PdfFilesSection, WordFilesSection } from './features/files/components';
 import { createGeminiClient, geminiSetupGuideText } from './lib/gemini';
 
 import * as mammoth from 'mammoth';
@@ -157,11 +157,6 @@ export default function App() {
       setWordSort(newConfig);
       setWordFiles(prev => sortAppFiles(prev, newConfig));
     }
-  };
-
-  const getSortIcon = (config: SortConfig | null, key: SortKey) => {
-    if (!config || config.key !== key) return null;
-    return config.order === 'asc' ? <ArrowUp className="inline w-3 h-3 ml-1 text-indigo-600" /> : <ArrowDown className="inline w-3 h-3 ml-1 text-indigo-600" />;
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -758,6 +753,18 @@ export default function App() {
 
   const totalSelected = selectedPdfIds.size + selectedImageIds.size + selectedWordIds.size;
 
+  const openAiAssistant = (files: AppFile[]) => {
+    setAiAssistantFiles(files);
+  };
+
+  const openPreview = (file: AppFile) => {
+    setPreviewFile(file);
+  };
+
+  const openEnhanceModal = (file: AppFile) => {
+    setEnhanceFile(file);
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 pb-32">
       <div className="max-w-4xl mx-auto px-4 py-12">
@@ -803,694 +810,84 @@ export default function App() {
 
           <DragDropContext onDragEnd={onDragEnd}>
             
-            {/* Image List Section */}
-            {imageFiles.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedImageIds.size === imageFiles.length && imageFiles.length > 0}
-                      onChange={toggleAllImages}
-                      className="w-4 h-4 text-indigo-600 rounded border-zinc-300 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <h3 className="font-semibold text-zinc-700">Images ({imageFiles.length})</h3>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-medium text-zinc-500">
-                    <button onClick={() => handleSort('image', 'name')} className="hover:text-zinc-900 transition-colors flex items-center">NAME {getSortIcon(imageSort, 'name')}</button>
-                    <button onClick={() => handleSort('image', 'date')} className="hover:text-zinc-900 transition-colors flex items-center">DATE {getSortIcon(imageSort, 'date')}</button>
-                    <button onClick={() => handleSort('image', 'size')} className="hover:text-zinc-900 transition-colors flex items-center">SIZE {getSortIcon(imageSort, 'size')}</button>
-                  </div>
-                </div>
-                
-                <Droppable droppableId="image-list" type="image">
-                  {(provided) => (
-                    <ul
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="divide-y divide-zinc-100"
-                    >
-                      {imageFiles.map((file, index) => (
-                        <Draggable key={file.id} draggableId={file.id} index={index}>
-                          {(provided, snapshot) => (
-                            <li
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className={`flex items-center p-4 gap-4 bg-white transition-colors
-                                ${snapshot.isDragging ? 'shadow-md ring-1 ring-indigo-500/20 z-10' : 'hover:bg-zinc-50'}
-                              `}
-                            >
-                              <div
-                                {...provided.dragHandleProps}
-                                className="text-zinc-400 hover:text-zinc-600 cursor-grab active:cursor-grabbing p-1"
-                              >
-                                <GripVertical className="w-5 h-5" />
-                              </div>
+            <ImageFilesSection
+              files={imageFiles}
+              selectedIds={selectedImageIds}
+              sortConfig={imageSort}
+              editingFileId={editingFileId}
+              editingName={editingName}
+              onEditingNameChange={setEditingName}
+              onCancelEditing={() => setEditingFileId(null)}
+              onSaveRename={(id) => saveRename(id, 'image')}
+              onStartRename={startRename}
+              onToggleAll={toggleAllImages}
+              onToggleSelection={toggleImageSelection}
+              onSort={(key) => handleSort('image', key)}
+              onOpenPreview={openPreview}
+              onDuplicate={(file) => duplicateFile(file, 'image')}
+              onRotate={rotateImage}
+              onEnhance={openEnhanceModal}
+              onAskAi={openAiAssistant}
+              onExtractText={handleExtractText}
+              extractingTextId={extractingTextId}
+              onRemove={(id) => removeFile(id, 'image')}
+              onDeleteSelected={deleteSelectedImages}
+              onCompress={compressSelectedImages}
+              isCompressing={isCompressing}
+              onConvertSelected={convertSelectedImages}
+              isConverting={isConverting}
+            />
 
-                              <input 
-                                type="checkbox" 
-                                checked={selectedImageIds.has(file.id)}
-                                onChange={() => toggleImageSelection(file.id)}
-                                className="w-4 h-4 text-indigo-600 rounded border-zinc-300 focus:ring-indigo-500 cursor-pointer"
-                              />
-                              
-                              <div 
-                                className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center overflow-hidden shrink-0 border border-zinc-200 cursor-pointer"
-                                onClick={() => setPreviewFile(file)}
-                              >
-                                {file.previewUrl ? (
-                                  <img src={file.previewUrl} alt={file.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <ImageIcon className="w-5 h-5 text-zinc-400" />
-                                )}
-                              </div>
-                              
-                              {editingFileId === file.id ? (
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <input 
-                                    type="text" 
-                                    value={editingName} 
-                                    onChange={e => setEditingName(e.target.value)}
-                                    className="flex-1 border border-indigo-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    autoFocus
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') saveRename(file.id, 'image');
-                                      if (e.key === 'Escape') setEditingFileId(null);
-                                    }}
-                                  />
-                                  <button onClick={() => saveRename(file.id, 'image')} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"><Check className="w-4 h-4"/></button>
-                                  <button onClick={() => setEditingFileId(null)} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4"/></button>
-                                </div>
-                              ) : (
-                                <div 
-                                  className="flex-1 min-w-0 flex items-center gap-2 group cursor-pointer"
-                                  onClick={() => setPreviewFile(file)}
-                                >
-                                  <p className="text-sm font-medium text-zinc-900 truncate hover:text-indigo-600 transition-colors">
-                                    {file.name}
-                                  </p>
-                                  <button onClick={(e) => { e.stopPropagation(); startRename(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Rename">
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); duplicateFile(file, 'image'); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">
-                                    <Copy className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); rotateImage(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Rotate 90°">
-                                    <RotateCw className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); setEnhanceFile(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Enhance Image">
-                                    <Wand2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
+            <PdfFilesSection
+              files={pdfFiles}
+              selectedIds={selectedPdfIds}
+              sortConfig={pdfSort}
+              editingFileId={editingFileId}
+              editingName={editingName}
+              onEditingNameChange={setEditingName}
+              onCancelEditing={() => setEditingFileId(null)}
+              onSaveRename={(id) => saveRename(id, 'pdf')}
+              onStartRename={startRename}
+              onToggleAll={toggleAllPdfs}
+              onToggleSelection={togglePdfSelection}
+              onSort={(key) => handleSort('pdf', key)}
+              onOpenPreview={openPreview}
+              onDuplicate={(file) => duplicateFile(file, 'pdf')}
+              onAskAi={openAiAssistant}
+              onExtractImages={handleExtractImages}
+              extractingImagesId={extractingImagesId}
+              onConvertToVector={handleConvertToVector}
+              convertingToImgId={convertingToImgId}
+              onEditPages={(file) => setEditingPagesPdfId(file.id)}
+              onRemove={(id) => removeFile(id, 'pdf')}
+              onDeleteSelected={deleteSelectedPdfs}
+              onCompress={compressSelectedPdfs}
+              isCompressing={isCompressing}
+              onMergeSelected={mergeSelectedPdfs}
+              isMerging={isMerging}
+            />
 
-                              <div className="text-xs text-zinc-500 w-20 text-right">
-                                {formatBytes(file.size)}
-                              </div>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreviewFile(file);
-                                }}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title="Preview File"
-                              >
-                                <Eye className="w-5 h-5" />
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setAiAssistantFiles([file]);
-                                }}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title="AI Assistant"
-                              >
-                                <Sparkles className="w-5 h-5" />
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleExtractText(file);
-                                }}
-                                disabled={extractingTextId === file.id}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50"
-                                title="Extract Text (OCR)"
-                              >
-                                {extractingTextId === file.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanText className="w-5 h-5" />}
-                              </button>
-                              
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeFile(file.id, 'image');
-                                }}
-                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Remove file"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                            </li>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </ul>
-                  )}
-                </Droppable>
-
-                <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex justify-between items-center overflow-x-auto">
-                  <span className="text-sm text-zinc-500 whitespace-nowrap min-w-max mr-4">
-                    {selectedImageIds.size} image(s) selected
-                  </span>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={deleteSelectedImages}
-                      disabled={selectedImageIds.size === 0}
-                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm shrink-0 whitespace-nowrap
-                        ${selectedImageIds.size === 0
-                          ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                          : 'bg-red-50 text-red-600 hover:bg-red-100 shadow-sm hover:shadow active:scale-[0.98]'
-                        }
-                      `}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete Selected
-                    </button>
-                    <button
-                      onClick={() => {
-                        const selectedFiles = imageFiles.filter(f => selectedImageIds.has(f.id));
-                        setAiAssistantFiles(selectedFiles);
-                      }}
-                      disabled={selectedImageIds.size === 0}
-                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm shrink-0 whitespace-nowrap
-                        ${selectedImageIds.size === 0
-                          ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                          : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 shadow-sm hover:shadow active:scale-[0.98]'
-                        }
-                      `}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      Ask AI
-                    </button>
-                    {/* Compress Group */}
-                    <div className="flex items-center">
-                      <div className={`relative flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap border
-                        ${selectedImageIds.size === 0 || isCompressing
-                          ? 'bg-zinc-50 text-zinc-400 border-zinc-200 cursor-not-allowed'
-                          : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 active:bg-indigo-100 shadow-sm cursor-pointer'
-                        }`}
-                      >
-                        {isCompressing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileArchive className="w-4 h-4" />}
-                        {isCompressing ? "Compressing..." : "Compress As..."}
-                        <select
-                          value=""
-                          onChange={(e) => compressSelectedImages(e.target.value as any)}
-                          disabled={selectedImageIds.size === 0 || isCompressing}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                        >
-                          <option value="" disabled>Select Ratio...</option>
-                          <option value="low">Low Quality (Smallest)</option>
-                          <option value="medium">Medium Quality (Recommended)</option>
-                          <option value="high">High Quality (Largest)</option>
-                        </select>
-                      </div>
-                    </div>
-                    <button
-                      onClick={convertSelectedImages}
-                      disabled={selectedImageIds.size === 0 || isConverting}
-                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm
-                        ${selectedImageIds.size === 0 || isConverting
-                          ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                          : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow active:scale-[0.98]'
-                        }
-                      `}
-                    >
-                      {isConverting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Converting...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="w-4 h-4" />
-                          Convert to PDF
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* PDF List Section */}
-            {pdfFiles.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedPdfIds.size === pdfFiles.length && pdfFiles.length > 0}
-                      onChange={toggleAllPdfs}
-                      className="w-4 h-4 text-indigo-600 rounded border-zinc-300 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <h3 className="font-semibold text-zinc-700">PDF Documents ({pdfFiles.length})</h3>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-medium text-zinc-500">
-                    <button onClick={() => handleSort('pdf', 'name')} className="hover:text-zinc-900 transition-colors flex items-center">NAME {getSortIcon(pdfSort, 'name')}</button>
-                    <button onClick={() => handleSort('pdf', 'date')} className="hover:text-zinc-900 transition-colors flex items-center">DATE {getSortIcon(pdfSort, 'date')}</button>
-                    <button onClick={() => handleSort('pdf', 'size')} className="hover:text-zinc-900 transition-colors flex items-center">SIZE {getSortIcon(pdfSort, 'size')}</button>
-                  </div>
-                </div>
-                
-                <Droppable droppableId="pdf-list" type="pdf">
-                  {(provided) => (
-                    <ul
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="divide-y divide-zinc-100"
-                    >
-                      {pdfFiles.map((file, index) => (
-                        <Draggable key={file.id} draggableId={file.id} index={index}>
-                          {(provided, snapshot) => (
-                            <li
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className={`flex items-center p-4 gap-4 bg-white transition-colors
-                                ${snapshot.isDragging ? 'shadow-md ring-1 ring-indigo-500/20 z-10' : 'hover:bg-zinc-50'}
-                              `}
-                            >
-                              <div
-                                {...provided.dragHandleProps}
-                                className="text-zinc-400 hover:text-zinc-600 cursor-grab active:cursor-grabbing p-1"
-                              >
-                                <GripVertical className="w-5 h-5" />
-                              </div>
-
-                              <input 
-                                type="checkbox" 
-                                checked={selectedPdfIds.has(file.id)}
-                                onChange={() => togglePdfSelection(file.id)}
-                                className="w-4 h-4 text-indigo-600 rounded border-zinc-300 focus:ring-indigo-500 cursor-pointer"
-                              />
-                              
-                              <div 
-                                className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-500 shrink-0 cursor-pointer hover:bg-red-100 transition-colors"
-                                onClick={() => setPreviewFile(file)}
-                              >
-                                <FileText className="w-5 h-5" />
-                              </div>
-                              
-                              {editingFileId === file.id ? (
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <input 
-                                    type="text" 
-                                    value={editingName} 
-                                    onChange={e => setEditingName(e.target.value)}
-                                    className="flex-1 border border-indigo-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    autoFocus
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') saveRename(file.id, 'pdf');
-                                      if (e.key === 'Escape') setEditingFileId(null);
-                                    }}
-                                  />
-                                  <button onClick={() => saveRename(file.id, 'pdf')} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"><Check className="w-4 h-4"/></button>
-                                  <button onClick={() => setEditingFileId(null)} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4"/></button>
-                                </div>
-                              ) : (
-                                <div 
-                                  className="flex-1 min-w-0 flex items-center gap-2 group cursor-pointer"
-                                  onClick={() => setPreviewFile(file)}
-                                >
-                                  <p className="text-sm font-medium text-zinc-900 truncate hover:text-indigo-600 transition-colors">
-                                    {file.name}
-                                  </p>
-                                  <button onClick={(e) => { e.stopPropagation(); startRename(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Rename">
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); duplicateFile(file, 'pdf'); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">
-                                    <Copy className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
-
-                              <div className="text-xs text-zinc-500 w-20 text-right">
-                                {formatBytes(file.size)}
-                              </div>
-                              
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreviewFile(file);
-                                }}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title="Preview File"
-                              >
-                                <Eye className="w-5 h-5" />
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setAiAssistantFiles([file]);
-                                }}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title="AI Assistant"
-                              >
-                                <Sparkles className="w-5 h-5" />
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleExtractImages(file);
-                                }}
-                                disabled={extractingImagesId === file.id}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50"
-                                title="Extract Images"
-                              >
-                                {extractingImagesId === file.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleConvertToVector(file);
-                                }}
-                                disabled={convertingToImgId === file.id}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50"
-                                title="Convert Pages to Vector (SVG)"
-                              >
-                                {convertingToImgId === file.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileImage className="w-5 h-5" />}
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingPagesPdfId(file.id);
-                                }}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title="Preview & Edit Pages"
-                              >
-                                <LayoutGrid className="w-5 h-5" />
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeFile(file.id, 'pdf');
-                                }}
-                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Remove file"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                            </li>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </ul>
-                  )}
-                </Droppable>
-
-                <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex flex-col gap-4">
-                  <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
-                    <span className="text-sm text-zinc-500 font-medium whitespace-nowrap">
-                      {selectedPdfIds.size} PDF(s) selected
-                    </span>
-                    
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
-                      <button
-                        onClick={deleteSelectedPdfs}
-                        disabled={selectedPdfIds.size === 0}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap
-                          ${selectedPdfIds.size === 0
-                            ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                            : 'bg-red-50 text-red-600 hover:bg-red-100 active:bg-red-200'
-                          }
-                        `}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete Selected
-                      </button>
-                      <button
-                        onClick={() => {
-                          const selectedFiles = pdfFiles.filter(f => selectedPdfIds.has(f.id));
-                          setAiAssistantFiles(selectedFiles);
-                        }}
-                        disabled={selectedPdfIds.size === 0}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap
-                          ${selectedPdfIds.size === 0
-                            ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 active:bg-indigo-200'
-                          }
-                        `}
-                      >
-                        <Sparkles className="w-4 h-4" />
-                        Ask AI
-                      </button>
-                      {/* Compress Group */}
-                      <div className="flex items-center">
-                        <div className={`relative flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap border
-                          ${selectedPdfIds.size === 0 || isCompressing
-                            ? 'bg-zinc-50 text-zinc-400 border-zinc-200 cursor-not-allowed'
-                            : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 active:bg-indigo-100 shadow-sm cursor-pointer'
-                          }`}
-                        >
-                          {isCompressing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileArchive className="w-4 h-4" />}
-                          {isCompressing ? "Compressing..." : "Compress As..."}
-                          <select
-                            value=""
-                            onChange={(e) => compressSelectedPdfs(e.target.value as any)}
-                            disabled={selectedPdfIds.size === 0 || isCompressing}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                          >
-                            <option value="" disabled>Select Ratio...</option>
-                            <option value="low">Low Quality (Smallest)</option>
-                            <option value="medium">Medium Quality (Recommended)</option>
-                            <option value="high">High Quality (Largest)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Merge Group */}
-                      <button
-                        onClick={mergeSelectedPdfs}
-                        disabled={selectedPdfIds.size < 2 || isMerging}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap
-                          ${selectedPdfIds.size < 2 || isMerging
-                            ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow active:scale-[0.98]'
-                          }
-                        `}
-                      >
-                        {isMerging ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
-                        Merge Selected
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {wordFiles.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden mb-8">
-                <div className="px-6 py-4 border-b border-zinc-200 bg-zinc-50/50 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedWordIds.size === wordFiles.length && wordFiles.length > 0}
-                      onChange={toggleAllWords}
-                      className="w-4 h-4 text-indigo-600 rounded border-zinc-300 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <h3 className="font-semibold text-zinc-700">Word Documents ({wordFiles.length})</h3>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-medium text-zinc-500">
-                    <button onClick={() => handleSort('word', 'name')} className="hover:text-zinc-900 transition-colors flex items-center">NAME {getSortIcon(wordSort, 'name')}</button>
-                    <button onClick={() => handleSort('word', 'date')} className="hover:text-zinc-900 transition-colors flex items-center">DATE {getSortIcon(wordSort, 'date')}</button>
-                    <button onClick={() => handleSort('word', 'size')} className="hover:text-zinc-900 transition-colors flex items-center">SIZE {getSortIcon(wordSort, 'size')}</button>
-                  </div>
-                </div>
-                
-                <Droppable droppableId="word-list" type="word">
-                  {(provided) => (
-                    <ul
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="divide-y divide-zinc-100"
-                    >
-                      {wordFiles.map((file, index) => (
-                        <Draggable key={file.id} draggableId={file.id} index={index}>
-                          {(provided, snapshot) => (
-                            <li
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className={`flex items-center p-4 gap-4 bg-white transition-colors
-                                ${snapshot.isDragging ? 'shadow-md ring-1 ring-indigo-500/20 z-10' : 'hover:bg-zinc-50'}
-                              `}
-                            >
-                              <div
-                                {...provided.dragHandleProps}
-                                className="text-zinc-400 hover:text-zinc-600 cursor-grab active:cursor-grabbing p-1"
-                              >
-                                <GripVertical className="w-5 h-5" />
-                              </div>
-
-                              <input 
-                                type="checkbox" 
-                                checked={selectedWordIds.has(file.id)}
-                                onChange={() => toggleWordSelection(file.id)}
-                                className="w-4 h-4 text-indigo-600 rounded border-zinc-300 focus:ring-indigo-500 cursor-pointer"
-                              />
-                              
-                              <div 
-                                className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 shrink-0 cursor-pointer hover:bg-blue-100 transition-colors"
-                                onClick={() => setPreviewFile(file)}
-                              >
-                                <FileText className="w-5 h-5" />
-                              </div>
-                              
-                              {editingFileId === file.id ? (
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <input 
-                                    type="text" 
-                                    value={editingName} 
-                                    onChange={e => setEditingName(e.target.value)}
-                                    className="flex-1 border border-indigo-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    autoFocus
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') saveRename(file.id, 'word');
-                                      if (e.key === 'Escape') setEditingFileId(null);
-                                    }}
-                                  />
-                                  <button onClick={() => saveRename(file.id, 'word')} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"><Check className="w-4 h-4"/></button>
-                                  <button onClick={() => setEditingFileId(null)} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4"/></button>
-                                </div>
-                              ) : (
-                                <div 
-                                  className="flex-1 min-w-0 flex items-center gap-2 group cursor-pointer"
-                                  onClick={() => setPreviewFile(file)}
-                                >
-                                  <p className="text-sm font-medium text-zinc-900 truncate hover:text-indigo-600 transition-colors">
-                                    {file.name}
-                                  </p>
-                                  <button onClick={(e) => { e.stopPropagation(); startRename(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Rename">
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); duplicateFile(file, 'word'); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">
-                                    <Copy className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              )}
-
-                              <div className="text-xs text-zinc-500 w-20 text-right">
-                                {formatBytes(file.size)}
-                              </div>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreviewFile(file);
-                                }}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title="Preview File"
-                              >
-                                <Eye className="w-5 h-5" />
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setAiAssistantFiles([file]);
-                                }}
-                                className="p-2 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title="AI Assistant"
-                              >
-                                <Sparkles className="w-5 h-5" />
-                              </button>
-                              
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeFile(file.id, 'word');
-                                }}
-                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Remove file"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                            </li>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </ul>
-                  )}
-                </Droppable>
-
-                <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex justify-between items-center overflow-x-auto">
-                  <span className="text-sm text-zinc-500 whitespace-nowrap min-w-max mr-4">
-                    {selectedWordIds.size} document(s) selected
-                  </span>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={deleteSelectedWords}
-                      disabled={selectedWordIds.size === 0}
-                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm shrink-0 whitespace-nowrap
-                        ${selectedWordIds.size === 0
-                          ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                          : 'bg-red-50 text-red-600 hover:bg-red-100 shadow-sm hover:shadow active:scale-[0.98]'
-                        }
-                      `}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete Selected
-                    </button>
-                    <button
-                      onClick={() => {
-                        const selectedFiles = wordFiles.filter(f => selectedWordIds.has(f.id));
-                        setAiAssistantFiles(selectedFiles);
-                      }}
-                      disabled={selectedWordIds.size === 0}
-                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm shrink-0 whitespace-nowrap
-                        ${selectedWordIds.size === 0
-                          ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                          : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 shadow-sm hover:shadow active:scale-[0.98]'
-                        }
-                      `}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      Ask AI
-                    </button>
-                    <button
-                      onClick={convertSelectedWords}
-                      disabled={selectedWordIds.size === 0 || isConverting}
-                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm
-                        ${selectedWordIds.size === 0 || isConverting
-                          ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                          : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow active:scale-[0.98]'
-                        }
-                      `}
-                    >
-                      {isConverting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Converting...
-                        </>
-                      ) : (
-                        <>
-                          <FileImage className="w-4 h-4" />
-                          To PDF
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <WordFilesSection
+              files={wordFiles}
+              selectedIds={selectedWordIds}
+              sortConfig={wordSort}
+              editingFileId={editingFileId}
+              editingName={editingName}
+              onEditingNameChange={setEditingName}
+              onCancelEditing={() => setEditingFileId(null)}
+              onSaveRename={(id) => saveRename(id, 'word')}
+              onStartRename={startRename}
+              onToggleAll={toggleAllWords}
+              onToggleSelection={toggleWordSelection}
+              onSort={(key) => handleSort('word', key)}
+              onOpenPreview={openPreview}
+              onDuplicate={(file) => duplicateFile(file, 'word')}
+              onAskAi={openAiAssistant}
+              onRemove={(id) => removeFile(id, 'word')}
+              onDeleteSelected={deleteSelectedWords}
+              onConvertSelected={convertSelectedWords}
+              isConverting={isConverting}
+            />
 
           </DragDropContext>
         </main>
