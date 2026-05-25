@@ -104,3 +104,55 @@
 
 - 暂未整理根目录实验脚本目录结构，这将作为下一次独立提交处理。
 - 暂未引入 UI / 集成测试框架和用例，这将作为后续单独迭代推进。
+
+## 2026-05-25 · Iteration 3 · Reorganize Experimental Scripts
+
+### 重构理由
+
+- 根目录散落 14 个 `test-*` 实验脚本，和应用入口、构建配置、正式文档混在一起，影响项目顶层可读性。
+- 这些文件没有被 `package.json`、应用源码或文档引用，适合集中收纳到更明确的目录。
+- 少数脚本依赖硬编码的 `node_modules/...` 相对路径，迁移时需要顺手修正以保持可执行性。
+
+### 备选方案
+
+1. **保留在根目录，仅靠命名区分实验脚本**
+	- 优点：路径完全不变。
+	- 缺点：顶层结构继续拥挤，实验脚本和正式入口难以快速区分。
+2. **迁移到 `scripts/experiments/` 并补最小说明文档**
+	- 优点：目录职责清晰，改动面小，后续继续归档或删除都更方便。
+	- 缺点：需要修正少量相对路径。
+
+### 最终方案
+
+选择方案 2，完成以下调整：
+
+- 将根目录下的 `test-*.ts`、`test-*.mjs` 和 `test-tools.js` 统一迁移到 `scripts/experiments/`。
+- 修正 4 个脚本中对 `node_modules/...` 的相对路径依赖。
+- 新增 `scripts/experiments/README.md`，说明这些脚本的用途和分组。
+
+### 重构前后对比
+
+#### 重构前
+
+- 根目录同时堆放应用代码、配置文件和手工实验脚本。
+- 实验脚本用途只能靠文件名猜测。
+
+#### 重构后
+
+- 实验脚本集中到 `scripts/experiments/`。
+- 顶层目录职责更单一。
+- 目录内有简短说明文件帮助后续维护。
+
+### 验证结果
+
+- `node scripts/experiments/test-mupdf2.mjs` 通过
+- `node scripts/experiments/test-mupdf-destroy.mjs` 通过
+- `node scripts/experiments/test-mupdf-page.mjs` 通过
+- `node scripts/experiments/test-pdfjs-svg.mjs` 通过
+- `npm test` 通过
+- `npm run lint` 通过
+- `npm run build` 通过
+
+### 刻意暂不改动的部分
+
+- 暂未引入 UI / 集成测试框架和用例，这将作为后续单独迭代推进。
