@@ -5,7 +5,7 @@
 ## 1. 基础环境前置要求
 本系统广泛运用了 ES Modules 和较新的语言特性，推荐运行在现代稳定的工具链之上：
 - **操作系统**：Windows 10/11 (WSL 推荐)，macOS，或各大 Linux 发行版。
-- **Node.js**: `v20.x` 或 `v22.x` 稳定版。推荐使用 nvm 或者 fnm 管理 Node.js 版本。
+- **Node.js**: `v20.19+` 或 `v22.13+` 稳定版。低于该版本的 Node.js 会在 `npm install` 前被直接拒绝，因为当前依赖链（Vite / pdfjs 等）已不再支持 Node 18。
 - **npm**: 随同 Node.js 提供的较新版本进行包管理。
 
 ## 2. 下载及依赖安装
@@ -16,7 +16,7 @@
 2. **安装所有的第三方依赖：**
 
 由于内置了大型机器学习依赖 (`@tensorflow/tfjs`, `upscaler`) 以及 PDF 解析库，该步骤可能耗时几十秒。
-由于底层可能需要编译 sqlite 相关的预置组件，系统可能提示需要一些 python 或者 C++ 组件库的支持，一般在标准的 Mac/Linux 或者已经有 Visual Studio Build Tools 的 Windows 下可以无缝通过。
+当前依赖集不再包含 `better-sqlite3` 这类 sqlite 原生编译模块；只要使用受支持的 Node.js 版本，常规 `npm install` 不应再要求 Visual Studio C++ Build Tools。若安装失败，优先检查 Node.js 版本与网络访问 npm registry 的情况。
 
 ```bash
 npm install

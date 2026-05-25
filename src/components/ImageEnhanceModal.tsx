@@ -17,7 +17,7 @@ export default function ImageEnhanceModal({ file, onClose, onSave }: ImageEnhanc
   const [enhancedBlob, setEnhancedBlob] = useState<Blob | null>(null);
   
   const imgRef = useRef<HTMLImageElement>(null);
-  const upscalerRef = useRef<Upscaler | null>(null);
+  const upscalerRef = useRef<InstanceType<typeof Upscaler> | null>(null);
 
   useEffect(() => {
     let active = true;

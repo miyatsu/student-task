@@ -2,8 +2,12 @@
   "name": "react-example",
   "private": true,
   "version": "0.0.0",
+  "engines": {
+    "node": "^20.19.0 || >=22.13.0"
+  },
   "type": "module",
   "scripts": {
+    "preinstall": "node scripts/check-node-version.mjs",
     "dev": "tsx server.ts",
     "build": "vite build",
     "start": "node server.ts",
@@ -19,7 +23,6 @@
     "@tensorflow/tfjs": "^4.11.0",
     "@types/compression": "^1.8.1",
     "@vitejs/plugin-react": "^5.0.4",
-    "better-sqlite3": "^12.4.1",
     "browser-image-compression": "^2.0.2",
     "compression": "^1.8.1",
     "dotenv": "^17.2.3",
