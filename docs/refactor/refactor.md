@@ -205,3 +205,56 @@
 ### 刻意暂不改动的部分
 
 - 暂未引入浏览器级 E2E 测试，这一步先以高价值、低脆弱度的 UI 回归测试为主。
+
+## 2026-05-25 · Iteration 5 · Reclassify Experiment Scripts
+
+### 重构理由
+
+- 上一轮已经把根目录中的 `test-*` 文件收敛到了 `scripts/experiments/`，但目录内部仍然是平铺结构，手工验证、诊断脚本和 spike 混在一起。
+- 进一步检查后可以确认，这些文件多数不是应该纳入 CI 的自动化回归测试，而是开发期验证工具；如果直接迁入真正的 `test/` 树，反而会模糊“自动化测试”和“探索性脚本”的边界。
+- 其中少量诊断脚本在再次下沉目录后需要同步修正相对路径，以保持可执行性。
+
+### 备选方案
+
+1. **把 `scripts/experiments/` 下的全部 `test-*` 迁入新的 `test/` 目录**
+	- 优点：名称上看更像测试文件，目录名更直观。
+	- 缺点：会把手工联调脚本、环境探测脚本和自动化回归测试混在一起，语义不准确。
+2. **保留在 `scripts/experiments/`，但按用途细分并明确文档边界**
+	- 优点：保留开发工具属性，同时降低目录阅读成本。
+	- 缺点：仍需维护一套与自动化测试并行的开发验证脚本树。
+
+### 最终方案
+
+选择方案 2，完成以下调整：
+
+- 将 `scripts/experiments/` 重组为 `diagnostics/`、`manual/`、`spikes/` 三类子目录。
+- 保持这些文件继续脱离自动化测试入口，不并入真正的 `test/` 树。
+- 修正 4 个依赖 `node_modules/...` 相对路径的诊断脚本。
+- 同步更新 `scripts/experiments/README.md`、`docs/testing.md`、`README.md`，明确实验脚本与自动化测试的边界。
+
+### 重构前后对比
+
+#### 重构前
+
+- `scripts/experiments/` 内部平铺所有 `test-*` 脚本。
+- 自动化测试与探索性脚本的边界主要靠人工理解。
+
+#### 重构后
+
+- 实验脚本按 `diagnostics/`、`manual/`、`spikes/` 分类存放。
+- 文档明确说明这些文件不会进入 `npm test`。
+- 目录语义与文件真实用途更一致。
+
+### 验证结果
+
+- `node scripts/experiments/diagnostics/test-mupdf2.mjs` 通过
+- `node scripts/experiments/diagnostics/test-mupdf-destroy.mjs` 通过
+- `node scripts/experiments/diagnostics/test-mupdf-page.mjs` 通过
+- `node scripts/experiments/diagnostics/test-pdfjs-svg.mjs` 通过
+- `npm test` 通过
+- `npm run lint` 通过
+- `npm run build` 通过
+
+### 刻意暂不改动的部分
+
+- 暂未引入浏览器级 E2E 测试，这一步仍以结构澄清和已有开发脚本整理为主。

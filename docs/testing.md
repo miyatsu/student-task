@@ -7,6 +7,7 @@
 1. **组件层面自动化测试**：当前已经为 `src/features/files/file-utils.ts` 建立纯逻辑回归测试，并为 `src/features/files/components/ImageFilesSection.ui.test.tsx` 建立 UI 回归测试，用于覆盖列表区块的排序、批量操作、行内重命名和单项操作事件路由。
 2. **浏览器 E2E 原理验证**：保障 Canvas 操作不产生跨域死锁或者内存逸出（OOM）。
 3. **集成验证**：重点在跨模块之间流转的文件，例如是否在不同区域依然保持正确的名字以及拓展后缀名。这需要人工 Checklist 校验。
+4. **实验 / 诊断脚本**：`scripts/experiments/` 下的脚本用于环境探测、库能力验证和手工联调，不属于自动化回归测试树，也不会被 `npm test` 执行。
 
 ### 1.1 当前自动化测试入口
 
@@ -23,6 +24,16 @@ npm run test:ui
 
 - `npm run test:logic` 会运行 `src/features/files/file-utils.test.ts`，用于验证文件分类、选择切换、排序、重命名、复制、批量删除以及 Zip 导出重名处理逻辑。
 - `npm run test:ui` 会运行 `src/features/files/components/ImageFilesSection.ui.test.tsx`，用于验证图片列表区块的关键 UI 交互是否仍然正确连接到回调和状态入口。
+
+### 1.2 实验脚本与自动化测试的边界
+
+`scripts/experiments/` 当前按用途拆分为：
+
+- `diagnostics/`：环境、CLI、第三方库 API 与能力探测。
+- `manual/`：需要本地服务或手工观察结果的联调脚本。
+- `spikes/`：一次性技术验证与可行性试验。
+
+这些脚本虽然名字里带有 `test-`，但语义上更接近“开发期验证工具”，不应与真正的自动化回归测试混放到统一的 `test/` 树中。
 
 ## 2. 人工测试大纲及执行 Check List
 
