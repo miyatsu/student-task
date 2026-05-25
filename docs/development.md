@@ -47,6 +47,8 @@ npm run build
 ```
 这一步会将所有的 React 组件、本地的 tfjs 流水线以及 CSS 打包到根目录下的 `dist/` 文件夹中。同时因为通过 esbuild 将相关 node runtime（`server.ts`）捆绑为能够利用的执行文件，随后可通过 `npm run start` 确认与线上等同的运行效果。
 
+如果你要把应用部署到 Cloud Run、VPS、Docker 容器或其他云平台，Gemini Key 不需要在构建阶段硬编码到前端产物里。只要在运行平台配置好 `GEMINI_API_KEY`，`npm run start` 启动时的 `server.ts` 就会在运行时读取该环境变量并把它提供给浏览器端的 Gemini 客户端。
+
 ## 5. 项目风格及代码提交
 在提交代码之前：
 - 请运行 `npm run lint` 以检查可能的 TypeScript 类型语法错误以及未捕捉的反模式调用。
@@ -55,14 +57,40 @@ npm run build
 ## 6. 添加环境变量
 虽然前端代码绝大部分运行在客户端，但如果使用到了特定的云端功能（如 Gemini API 交互分析），则需要在项目根目录依据示例创建 `.env`文件配置后端参数。
 
+### 6.1 免费获取独立 Key
+你可以前往 Google AI Studio 开发者控制台免费申请一个专属的 Gemini API Key：
+
+<https://aistudio.google.com/app/apikey>
+
+Gemini 的免费层级一般已经足够覆盖本项目的本地开发、功能演示与轻量公开部署测试。
+
 如果该项目来自 Google AI Studio 导出，请不要假设本地开发环境会自动继承 AI Studio 中的密钥注入。你需要在本机手动创建 `.env` 并填入可用的 `GEMINI_API_KEY`。
 
 未配置 `GEMINI_API_KEY` 时，应用主界面仍会正常启动；只有 Gemini 聊天和基于 Gemini 的图片 OCR 会在界面内提示“未配置”并保持不可用，不会再导致整页白屏。
+
+### 6.2 本地物理机运行
+在项目根目录新建 `.env` 文件（不要提交到 Git），填入：
 
 ```text
 # 示例：创建 .env
 GEMINI_API_KEY=your_actual_key_here
 ```
+
+随后执行：
+
+```bash
+npm run dev
+```
+
+### 6.3 云服务器 / 云平台运行
+对于 Cloud Run、VPS、Docker / 容器平台等独立部署环境，无需修改项目代码。只需要在平台提供的“环境变量 (Environment Variables)”配置面板中新增：
+
+```text
+GEMINI_API_KEY=your_actual_key_here
+```
+
+之后在部署流程中执行构建，并在运行阶段通过 `npm run start` 启动。`server.ts` 会在运行时读取该环境变量并让前端 Gemini 对话与 OCR 能力正常工作。
+
 > 请特别注意：绝不要把包括 `.env` 在内的含有私人身份和计费 Key 的属性混入 Git 代码库。
 
 ---

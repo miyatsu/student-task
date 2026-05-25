@@ -1,5 +1,6 @@
 import express from "express";
 import compression from "compression";
+import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import multer from "multer";
 import { createServer as createHttpServer } from "http";
@@ -7,6 +8,8 @@ import type { AddressInfo } from "net";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+
+dotenv.config({ quiet: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +29,13 @@ async function startServer() {
   // API routes FIRST
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.get("/api/runtime-config", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      geminiApiKey: process.env.GEMINI_API_KEY?.trim() || "",
+    });
   });
 
   const jobs = new Map<string, { status: string, outputPath: string, inputPath: string, error?: string }>();

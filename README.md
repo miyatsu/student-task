@@ -21,5 +21,10 @@
 
 如果这是从 Google AI Studio 导出的项目，请额外注意：AI Studio 托管环境通常会替你注入 Gemini 所需的密钥；本地运行时如果没有在项目根目录配置 `.env` 中的 `GEMINI_API_KEY`，基础文件处理界面仍然可以正常打开，但 Gemini 聊天与基于 Gemini 的 OCR 能力会保持禁用并提示如何配置。
 
+Gemini Key 配置速览：
+- 免费独立 Key 可在 Google AI Studio 开发者控制台申请：<https://aistudio.google.com/app/apikey>。免费层通常足够覆盖本地试用或轻量公开演示。
+- 本地运行时，在项目根目录创建 `.env` 并写入 `GEMINI_API_KEY=你的专属 API Key`，然后执行 `npm run dev`。
+- 云端部署时，无需改代码；只需在平台环境变量里设置 `GEMINI_API_KEY`。构建完成后，`npm run start` 启动的 `server.ts` 会在运行时读取该值并提供给浏览器端 AI 功能。
+
 ---
 *本项目不强制绑定远端的云端数据库或者依赖云侧持久化存储，核心在于使用浏览器内置机能（`tf.js`, Web Workers 等）保护您的重要事务文档数据安全。*

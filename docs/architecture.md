@@ -19,7 +19,7 @@
 - **打包组装**: `jszip` 动态生成下载的压缩包；`browser-image-compression` 实现本地图片压缩。
 
 ### 1.3 后端核心（BFF / 轻代理）
-- 提供了一个基于 `express` 的轻量 API Node Server (`server.ts`)。当前实现使用进程内 `Map` 跟踪短生命周期作业状态，主要负责敏感 API 密钥转发、文件上传处理以及 PDF 压缩 / 转图等任务编排；开发模式下还会把 Vite 中间件与 HMR WebSocket 统一挂载到同一个 HTTP Server 上，并在默认端口被占用时自动回退到下一个可用端口。在核心文件交互（增删改查及画质增强）上仍保持“后端可选”的设计。
+- 提供了一个基于 `express` 的轻量 API Node Server (`server.ts`)。当前实现使用进程内 `Map` 跟踪短生命周期作业状态，主要负责文件上传处理、PDF 压缩 / 转图等任务编排，并通过 `/api/runtime-config` 在运行时把 `GEMINI_API_KEY` 从本机或云平台环境变量桥接给浏览器端 Gemini 客户端；开发模式下还会把 Vite 中间件与 HMR WebSocket 统一挂载到同一个 HTTP Server 上，并在默认端口被占用时自动回退到下一个可用端口。在核心文件交互（增删改查及画质增强）上仍保持“后端可选”的设计。
 
 ## 2. 核心架构与组件划分
 

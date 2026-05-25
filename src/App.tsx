@@ -8,7 +8,7 @@ import AiAssistant from './components/AiAssistant';
 import ImageEnhanceModal from './components/ImageEnhanceModal';
 import FilePreview from './components/FilePreview';
 import imageCompression from 'browser-image-compression';
-import { createGeminiClient, missingGeminiApiKeyMessage } from './lib/gemini';
+import { createGeminiClient, geminiSetupGuideText } from './lib/gemini';
 
 import * as mammoth from 'mammoth';
 // @ts-ignore
@@ -713,9 +713,9 @@ export default function App() {
   const handleExtractText = async (appFile: AppFile) => {
     setExtractingTextId(appFile.id);
     try {
-      const ai = createGeminiClient();
+      const ai = await createGeminiClient();
       if (!ai) {
-        alert(missingGeminiApiKeyMessage);
+        alert(geminiSetupGuideText);
         return;
       }
 
