@@ -1,10 +1,10 @@
 # 测试文档
 
-为了保证这套轻量级但功能复杂的多功能文件处理逻辑保持高度可用性，应当在版本迭代之前经历以下测试。当前重点为主干流程的 E2E（在浏览器前台）以及人工边界探测验证。
+为了保证这套轻量级但功能复杂的多功能文件处理逻辑保持高度可用性，应当在版本迭代之前经历以下测试。当前策略已经同时覆盖纯逻辑回归、关键 UI 组件回归以及主干流程的人工验证。
 
 ## 1. 测试策略
 鉴于系统的纯前端运行特点：
-1. **组件层面单元测试**：针对某些纯数据重组类型的 Utils 或者 Hook 做基本断言；当前已经为 `src/features/files/file-utils.ts` 建立了自动化回归测试，可通过 `npm test` 运行。
+1. **组件层面自动化测试**：当前已经为 `src/features/files/file-utils.ts` 建立纯逻辑回归测试，并为 `src/features/files/components/ImageFilesSection.ui.test.tsx` 建立 UI 回归测试，用于覆盖列表区块的排序、批量操作、行内重命名和单项操作事件路由。
 2. **浏览器 E2E 原理验证**：保障 Canvas 操作不产生跨域死锁或者内存逸出（OOM）。
 3. **集成验证**：重点在跨模块之间流转的文件，例如是否在不同区域依然保持正确的名字以及拓展后缀名。这需要人工 Checklist 校验。
 
@@ -14,7 +14,15 @@
 npm test
 ```
 
-该命令当前会运行 `src/features/files/file-utils.test.ts`，用于验证文件分类、选择切换、排序、重命名、复制、批量删除以及 Zip 导出重名处理逻辑。
+该命令当前会顺序运行以下两层自动化测试：
+
+```bash
+npm run test:logic
+npm run test:ui
+```
+
+- `npm run test:logic` 会运行 `src/features/files/file-utils.test.ts`，用于验证文件分类、选择切换、排序、重命名、复制、批量删除以及 Zip 导出重名处理逻辑。
+- `npm run test:ui` 会运行 `src/features/files/components/ImageFilesSection.ui.test.tsx`，用于验证图片列表区块的关键 UI 交互是否仍然正确连接到回调和状态入口。
 
 ## 2. 人工测试大纲及执行 Check List
 
