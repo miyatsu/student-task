@@ -15,6 +15,14 @@
 1. **进入项目根目录：**（确保你能够看到 `package.json` 文件）
 2. **安装所有的第三方依赖：**
 
+如果你是在 **VS Code 已经打开** 的情况下，刚刚安装或切换了 Node.js / nvm 版本，当前集成终端可能还没有拿到新的环境变量，表现通常是 `npm` / `node` “无法识别命令”。此时请先执行：
+
+```powershell
+. .\scripts\refresh-node-env.ps1
+```
+
+如果仍然无效，再完全关闭并重新打开 VS Code。
+
 由于内置了大型机器学习依赖 (`@tensorflow/tfjs`, `upscaler`) 以及 PDF 解析库，该步骤可能耗时几十秒。
 当前依赖集不再包含 `better-sqlite3` 这类 sqlite 原生编译模块；只要使用受支持的 Node.js 版本，常规 `npm install` 不应再要求 Visual Studio C++ Build Tools。若安装失败，优先检查 Node.js 版本与网络访问 npm registry 的情况。
 
