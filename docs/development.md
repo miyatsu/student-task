@@ -47,6 +47,18 @@ npm run build
 ```
 这一步会将所有的 React 组件、本地的 tfjs 流水线以及 CSS 打包到根目录下的 `dist/` 文件夹中。同时因为通过 esbuild 将相关 node runtime（`server.ts`）捆绑为能够利用的执行文件，随后可通过 `npm run start` 确认与线上等同的运行效果。
 
+如果你想在本地预览“带后端 API 的生产态”，请在构建完成后执行：
+
+```bash
+npm run preview
+```
+
+这个脚本会直接用生产模式启动 `server.ts` 并服务 `dist/`，因此 `.doc` 转 PDF、PDF 转图、压缩等依赖 Express 路由的能力都能一起验证。如果只想临时查看纯静态前端资源，而不需要任何 API，可额外使用：
+
+```bash
+npm run preview:static
+```
+
 如果你要把应用部署到 Cloud Run、VPS、Docker 容器或其他云平台，Gemini Key 不需要在构建阶段硬编码到前端产物里。只要在运行平台配置好 `GEMINI_API_KEY`，`npm run start` 启动时的 `server.ts` 就会在运行时读取该环境变量并把它提供给浏览器端的 Gemini 客户端。
 
 ## 5. 项目风格及代码提交

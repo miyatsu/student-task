@@ -49,6 +49,8 @@ PCIE 项目是一个现代化的、强调本地隐私保护与开箱即用的前
 
 开发模式补充说明：`npm run dev` 默认监听 `http://localhost:3000`；如果 3000 已被占用，服务会自动切换到下一个可用端口，并在终端打印实际访问地址。
 
+生产预览补充说明：`npm run preview` 现在会以 `NODE_ENV=production` 启动完整的 Express + API 服务器，并直接服务 `dist/` 产物，因此像 `.doc` 转 PDF、PDF 转图等依赖后端接口的功能也能在预览阶段真实可用；如果只想看纯静态前端，可使用 `npm run preview:static`。
+
 仓库中的自动化回归测试通过 `npm test` 运行，当前覆盖纯逻辑、文件列表 UI 回归、自然排序与行内移动规则、图片/Word 转 PDF 进度展示、旧版 `.doc` 提取辅助逻辑、PDF 页操作、Gemini 运行时配置加载以及服务端运行时配置 / PDF 压缩辅助逻辑；另有一组开发期诊断与手工验证脚本位于 `scripts/experiments/`，按 `diagnostics/`、`manual/`、`spikes/` 分类保存，它们不会进入默认测试流水线。
 
 如果这是从 Google AI Studio 导出的项目，请额外注意：AI Studio 托管环境通常会替你注入 Gemini 所需的密钥；本地运行时如果没有在项目根目录配置 `.env` 中的 `GEMINI_API_KEY`，基础文件处理界面仍然可以正常打开，但 Gemini 聊天与基于 Gemini 的 OCR 能力会保持禁用并提示如何配置。
