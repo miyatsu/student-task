@@ -1,0 +1,21 @@
+{
+	"cmake.sourceDirectory": "D:/code-repos/student-task/incentives/pcie",
+	"files.exclude": {
+		"**/*.vo": true,
+		"**/*.vok": true,
+		"**/*.vos": true,
+		"**/*.aux": true,
+		"**/*.glob": true,
+		"**/.git": true,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/.DS_Store": true,
+		"**/Thumbs.db": true,
+		"**/CVS": true,
+		"**/*.olean": true,
+		"**/.classpath": true,
+		"**/.project": true,
+		"**/.settings": true,
+		"**/.factorypath": true
+	}
+}
