@@ -65,6 +65,16 @@ export interface AppFile {
 
 这种方式的优势是无需要求宿主机额外安装 Word、LibreOffice 或任何本地 Office 组件；代价是对于老 `.doc` 的复杂版式，只能保证可读文本尽可能完整，无法像 `DOCX` 一样高保真地恢复样式布局。
 
+最近修复的一处关键问题是：Word HTML 以前会先被挂到 `position:absolute; left:-9999px` 的离屏节点上，再交给 `html2pdf.js`。但 `html2pdf` 在内部会克隆这个源节点，并保留它的定位样式，导致克隆后的内容脱离文档流、高度塌为 `0`，最终生成空白 PDF。
+
+现在这条路径改成了 `[src/features/files/word-pdf.ts](../src/features/files/word-pdf.ts)` 中的隐藏宿主模型：
+
+1. 外层宿主 `host` 负责“不可见、不可交互、不影响主界面”。
+2. 真正传给 `html2pdf` 的 `source` 内容节点保持普通文档流，不再带绝对定位。
+3. 转换结束后立即清理宿主节点，不留下额外 DOM。
+
+这样既保持了本地渲染，也避免把布局信息在克隆阶段破坏掉。
+
 <a id="ai-image-enhancement"></a>
 ## 3. UI无缝结合的 AI 本地放大器算法
 针对图片分辨率或者质感提升，在早期曾经考量使用纯 `Canvas 2d + Worker` 进行传统的像素过滤掩码计算法。但为了真实地生成原先不存在的高频纹理，目前使用了 `@tensorflow/tfjs` 与 `upscaler`（基于深度学习的前端推测库）。
