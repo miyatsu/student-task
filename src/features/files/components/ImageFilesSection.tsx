@@ -150,7 +150,11 @@ export function ImageFilesSection({
                         onStartRename(file);
                       }}
                     >
-                      <button onClick={(event) => { event.stopPropagation(); onDuplicate(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">
+                      <button
+                        onClick={(event) => { event.stopPropagation(); onDuplicate(file); }}
+                        className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-white p-1.5 text-zinc-500 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                        title="Duplicate"
+                      >
                         <Copy className="w-4 h-4" />
                       </button>
                       <button onClick={(event) => { event.stopPropagation(); onRotate(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Rotate 90°">
