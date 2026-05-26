@@ -11,6 +11,8 @@ import HomeHero from './components/HomeHero';
 import imageCompression from 'browser-image-compression';
 import {
   AppFile,
+  buildImageToPdfErrorMessage,
+  embedImageFileInPdf,
   SortConfig,
   SortKey,
   duplicateAppFile,
@@ -362,33 +364,32 @@ export default function App() {
     if (selectedImgs.length === 0) return;
 
     setIsConverting(true);
+    setConversionError(null);
     try {
       const newPdfs: AppFile[] = [];
       
       for (const img of selectedImgs) {
-        const pdfDoc = await PDFDocument.create();
-        const arrayBuffer = await img.file.arrayBuffer();
-        let image;
-        if (img.file.type === 'image/png') {
-          image = await pdfDoc.embedPng(arrayBuffer);
-        } else {
-          image = await pdfDoc.embedJpg(arrayBuffer);
+        try {
+          const pdfDoc = await PDFDocument.create();
+          const { image } = await embedImageFileInPdf(pdfDoc, img.file);
+          const page = pdfDoc.addPage([image.width, image.height]);
+          page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+          const pdfBytes = await pdfDoc.save();
+          
+          const baseName = img.name.replace(/\.[^/.]+$/, "");
+          const newName = `${baseName}.pdf`;
+          const newFile = new File([pdfBytes], newName, { type: 'application/pdf' });
+          
+          newPdfs.push({
+            id: Math.random().toString(36).substring(7),
+            file: newFile,
+            name: newName,
+            size: newFile.size,
+            type: 'pdf'
+          });
+        } catch (error) {
+          throw new Error(buildImageToPdfErrorMessage(img.name, error));
         }
-        const page = pdfDoc.addPage([image.width, image.height]);
-        page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
-        const pdfBytes = await pdfDoc.save();
-        
-        const baseName = img.name.replace(/\.[^/.]+$/, "");
-        const newName = `${baseName}.pdf`;
-        const newFile = new File([pdfBytes], newName, { type: 'application/pdf' });
-        
-        newPdfs.push({
-          id: Math.random().toString(36).substring(7),
-          file: newFile,
-          name: newName,
-          size: newFile.size,
-          type: 'pdf'
-        });
       }
       
       setPdfFiles(prev => [...prev, ...newPdfs]);
@@ -397,8 +398,12 @@ export default function App() {
       // Clear selection of images after conversion, but keep the images in the list
       setSelectedImageIds(new Set());
     } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : buildImageToPdfErrorMessage('selected image', error);
       console.error("Error converting images:", error);
-      alert("An error occurred while converting images.");
+      setConversionError(message);
+      alert(message);
     } finally {
       setIsConverting(false);
     }
