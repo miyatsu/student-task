@@ -1,3 +1,4 @@
+export * from './ConversionProgressCard';
 export * from './EditableFileNameCell';
 export * from './FileSectionHeader';
 export * from './ImageFilesSection';

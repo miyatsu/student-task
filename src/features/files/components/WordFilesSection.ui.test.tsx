@@ -63,6 +63,7 @@ function createProps(overrides: Partial<ComponentProps<typeof WordFilesSection>>
     onDeleteSelected: overrides.onDeleteSelected ?? vi.fn(),
     onConvertSelected: overrides.onConvertSelected ?? vi.fn(),
     isConverting: overrides.isConverting ?? false,
+    conversionProgress: overrides.conversionProgress ?? null,
   };
 }
 
@@ -117,6 +118,23 @@ describe('WordFilesSection', () => {
 
     await user.click(screen.getByRole('button', { name: 'To PDF' }));
     expect(props.onConvertSelected).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows word conversion progress details while converting', () => {
+    const props = createProps({
+      isConverting: true,
+      conversionProgress: {
+        completed: 2,
+        total: 5,
+        currentFileName: 'archive.doc',
+      },
+    });
+
+    render(<WordFilesSection {...props} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Converting Word documents to PDF');
+    expect(screen.getByRole('status')).toHaveTextContent('2/5');
+    expect(screen.getByRole('status')).toHaveTextContent('Now converting archive.doc');
   });
 
   it('saves inline rename edits with the current file id', async () => {

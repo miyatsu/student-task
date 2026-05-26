@@ -13,13 +13,14 @@
 
 ### 1.2 核心业务依赖库
 - **PDF 编解码**: `pdf-lib` (对页面和流数据处理)、`pdfjs-dist` (PDF可视化渲染或预览支持)。
+- **Word 文档解析**: `mammoth` 用于前端 `DOCX -> HTML` 转换，`word-extractor` 用于服务端解析旧版 `.doc` 文档中的可读文本。
 - **机器视觉与 AI**: 
   - 通过 `@tensorflow/tfjs` 和 `upscaler`，实现本地推理解析，提升图片质感和细节。
   - 依赖 `@google/genai` 完成基于云端大规模语言模型（LLM）的内容润色和查询。
 - **打包组装**: `jszip` 动态生成下载的压缩包；`browser-image-compression` 实现本地图片压缩。
 
 ### 1.3 后端核心（BFF / 轻代理）
-- 提供了一个基于 `express` 的轻量 API Node Server (`server.ts`)。当前实现使用进程内 `Map` 跟踪短生命周期作业状态，主要负责文件上传处理、PDF 压缩 / 转图等任务编排，并通过 `/api/runtime-config` 在运行时把 `GEMINI_API_KEY` 从本机或云平台环境变量桥接给浏览器端 Gemini 客户端；开发模式下还会把 Vite 中间件与 HMR WebSocket 统一挂载到同一个 HTTP Server 上，并在默认端口被占用时自动回退到下一个可用端口。在核心文件交互（增删改查及画质增强）上仍保持“后端可选”的设计。
+- 提供了一个基于 `express` 的轻量 API Node Server (`server.ts`)。当前实现使用进程内 `Map` 跟踪短生命周期作业状态，主要负责文件上传处理、PDF 压缩 / 转图、旧版 `.doc` 文本提取等任务编排，并通过 `/api/runtime-config` 在运行时把 `GEMINI_API_KEY` 从本机或云平台环境变量桥接给浏览器端 Gemini 客户端；开发模式下还会把 Vite 中间件与 HMR WebSocket 统一挂载到同一个 HTTP Server 上，并在默认端口被占用时自动回退到下一个可用端口。在核心文件交互（增删改查及画质增强）上仍保持“后端可选”的设计。
 
 ## 2. 核心架构与组件划分
 
@@ -40,6 +41,12 @@
   - `src/features/files/types.ts`：定义 `AppFile`、排序配置等跨组件共享类型，避免组件反向依赖 `App.tsx`。
   - `src/features/files/file-utils.ts`：封装文件分类、排序、选择切换、重命名、复制、批量删除和 Zip 命名冲突处理等纯逻辑。
   - `src/features/files/file-utils.test.ts`：为上述纯逻辑提供自动化回归测试。
+  - `src/features/files/components/ConversionProgressCard.tsx`：为图片与 Word 批量转 PDF 复用统一的绿色进度卡片。
+
+4. **轻量服务端辅助模块**
+  - `src/server/compression.ts`：封装 PDF 压缩任务的参数拼装。
+  - `src/server/runtime-config.ts`：集中读取运行时 Gemini 配置。
+  - `src/server/word-conversion.ts`：使用 `word-extractor` 解析旧版 `.doc` 文件，并把可读文本包装成安全 HTML，供前端继续转 PDF。
 
 ## 3. 本地架构视图 
 *(C4 模型的容器级架构)*
@@ -83,6 +90,7 @@ AiAssistant --> GeminiAPI : 云端文档理解与对话
 App --> ImageCompression : 本地图片压缩
 
 App <--> Backend : 可选 API 调用
+Backend --> Backend : `.doc` 文本提取 / PDF 转图 / 压缩任务`
 @enduml
 ```
 

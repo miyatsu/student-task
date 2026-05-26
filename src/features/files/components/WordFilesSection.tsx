@@ -3,6 +3,8 @@ import { Copy, Eye, FileImage, FileText, GripVertical, Loader2, Sparkles, Trash2
 
 import { formatBytes, selectFilesByIds } from '../file-utils';
 import type { AppFile, SortConfig, SortKey } from '../types';
+import type { ConversionProgressValue } from './ConversionProgressCard';
+import { ConversionProgressCard } from './ConversionProgressCard';
 import { EditableFileNameCell } from './EditableFileNameCell';
 import { FileSectionHeader } from './FileSectionHeader';
 import { MoveFileButtons } from './MoveFileButtons';
@@ -28,6 +30,7 @@ interface WordFilesSectionProps {
   onDeleteSelected: () => void;
   onConvertSelected: () => void;
   isConverting: boolean;
+  conversionProgress: ConversionProgressValue | null;
 }
 
 export function WordFilesSection({
@@ -51,6 +54,7 @@ export function WordFilesSection({
   onDeleteSelected,
   onConvertSelected,
   isConverting,
+  conversionProgress,
 }: WordFilesSectionProps) {
   if (files.length === 0) {
     return null;
@@ -178,11 +182,16 @@ export function WordFilesSection({
         )}
       </Droppable>
 
-      <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex justify-between items-center overflow-x-auto">
-        <span className="text-sm text-zinc-500 whitespace-nowrap min-w-max mr-4">
-          {selectedIds.size} document(s) selected
-        </span>
-        <div className="flex gap-3">
+      <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex flex-col gap-4">
+        {isConverting && conversionProgress && (
+          <ConversionProgressCard title="Converting Word documents to PDF" progress={conversionProgress} />
+        )}
+
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between overflow-x-auto">
+          <span className="text-sm text-zinc-500 whitespace-nowrap min-w-max mr-4">
+            {selectedIds.size} document(s) selected
+          </span>
+          <div className="flex gap-3">
           <button
             onClick={onDeleteSelected}
             disabled={selectedIds.size === 0}
@@ -231,6 +240,7 @@ export function WordFilesSection({
               </>
             )}
           </button>
+          </div>
         </div>
       </div>
     </div>

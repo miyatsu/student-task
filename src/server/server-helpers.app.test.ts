@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildGhostscriptCompressionCommand,
@@ -8,6 +8,11 @@ import {
   resolvePdfCompressionSettings,
 } from './compression';
 import { readRuntimeConfig } from './runtime-config';
+import {
+  buildWordHtmlFromExtractedText,
+  extractLegacyWordHtml,
+  isLegacyWordDocument,
+} from './word-conversion';
 
 describe('server compression helpers', () => {
   it('maps compression levels to Ghostscript settings', () => {
@@ -48,5 +53,49 @@ describe('runtime config helpers', () => {
     expect(readRuntimeConfig({ GEMINI_API_KEY: undefined })).toEqual({
       geminiApiKey: '',
     });
+  });
+});
+
+describe('word conversion helpers', () => {
+  it('detects legacy .doc files by extension', () => {
+    expect(isLegacyWordDocument('legacy.doc')).toBe(true);
+    expect(isLegacyWordDocument('legacy.DOC')).toBe(true);
+    expect(isLegacyWordDocument('modern.docx')).toBe(false);
+  });
+
+  it('renders extracted word text as escaped html paragraphs', () => {
+    const html = buildWordHtmlFromExtractedText({
+      body: 'Heading\nSecond line\n\n<unsafe> body',
+      footnotes: 'Note A',
+    });
+
+    expect(html).toContain('<p>Heading<br />Second line</p>');
+    expect(html).toContain('<p>&lt;unsafe&gt; body</p>');
+    expect(html).toContain('<section><h2>Footnotes</h2><p>Note A</p></section>');
+  });
+
+  it('extracts legacy .doc html through the injected extractor loader', async () => {
+    const extract = vi.fn().mockResolvedValue({
+      getBody: () => 'Legacy body',
+      getHeaders: () => 'Header text',
+      getFooters: () => '',
+      getFootnotes: () => '',
+      getEndnotes: () => '',
+      getAnnotations: () => '',
+      getTextboxes: () => 'Textbox text',
+    });
+
+    const loadWordExtractor = async () => {
+      return class {
+        extract = extract;
+      };
+    };
+
+    const html = await extractLegacyWordHtml(Buffer.from('legacy-doc'), { loadWordExtractor });
+
+    expect(extract).toHaveBeenCalledWith(Buffer.from('legacy-doc'));
+    expect(html).toContain('<p>Legacy body</p>');
+    expect(html).toContain('<section><h2>Headers</h2><p>Header text</p></section>');
+    expect(html).toContain('<section><h2>Text Boxes</h2><p>Textbox text</p></section>');
   });
 });
