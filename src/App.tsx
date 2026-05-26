@@ -12,6 +12,7 @@ import imageCompression from 'browser-image-compression';
 import {
   AppFile,
   buildImageToPdfErrorMessage,
+  createWordPdfRenderHost,
   embedImageFileInPdf,
   SortConfig,
   SortKey,
@@ -393,18 +394,7 @@ export default function App() {
         });
 
         const html = await convertWordFileToHtml(word);
-        
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        tempDiv.style.width = '210mm';
-        tempDiv.style.padding = '20mm';
-        tempDiv.style.backgroundColor = 'white';
-        tempDiv.style.color = 'black';
-        tempDiv.style.fontFamily = 'Arial, sans-serif';
-        tempDiv.style.lineHeight = '1.5';
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        document.body.appendChild(tempDiv);
+        const renderHost = createWordPdfRenderHost(html);
         
         try {
           const opt: any = {
@@ -414,7 +404,7 @@ export default function App() {
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
           };
-          const pdfBlob = await html2pdf().set(opt).from(tempDiv).output('blob');
+          const pdfBlob = await html2pdf().set(opt).from(renderHost.source).output('blob');
           
           const baseName = word.name.replace(/\.[^/.]+$/, "");
           const newName = `${baseName}.pdf`;
@@ -434,7 +424,7 @@ export default function App() {
             currentFileName: selected[index + 1]?.name ?? null,
           });
         } finally {
-          document.body.removeChild(tempDiv);
+          renderHost.dispose();
         }
       }
       
