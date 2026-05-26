@@ -5,8 +5,15 @@ import { formatBytes, selectFilesByIds } from '../file-utils';
 import type { AppFile, SortConfig, SortKey } from '../types';
 import { EditableFileNameCell } from './EditableFileNameCell';
 import { FileSectionHeader } from './FileSectionHeader';
+import { MoveFileButtons } from './MoveFileButtons';
 
 type CompressionLevel = 'low' | 'medium' | 'high';
+
+interface ImageConversionProgress {
+  completed: number;
+  total: number;
+  currentFileName: string | null;
+}
 
 interface ImageFilesSectionProps {
   files: AppFile[];
@@ -21,6 +28,7 @@ interface ImageFilesSectionProps {
   onToggleAll: () => void;
   onToggleSelection: (id: string) => void;
   onSort: (key: SortKey) => void;
+  onMove: (id: string, direction: 'up' | 'down') => void;
   onOpenPreview: (file: AppFile) => void;
   onDuplicate: (file: AppFile) => void;
   onRotate: (file: AppFile) => void;
@@ -34,6 +42,7 @@ interface ImageFilesSectionProps {
   isCompressing: boolean;
   onConvertSelected: () => void;
   isConverting: boolean;
+  conversionProgress: ImageConversionProgress | null;
 }
 
 export function ImageFilesSection({
@@ -49,6 +58,7 @@ export function ImageFilesSection({
   onToggleAll,
   onToggleSelection,
   onSort,
+  onMove,
   onOpenPreview,
   onDuplicate,
   onRotate,
@@ -62,6 +72,7 @@ export function ImageFilesSection({
   isCompressing,
   onConvertSelected,
   isConverting,
+  conversionProgress,
 }: ImageFilesSectionProps) {
   if (files.length === 0) {
     return null;
@@ -69,6 +80,11 @@ export function ImageFilesSection({
 
   const allSelected = selectedIds.size === files.length && files.length > 0;
   const selectedFiles = selectFilesByIds(files, selectedIds);
+  const completedCount = conversionProgress?.completed ?? 0;
+  const totalCount = conversionProgress?.total ?? 0;
+  const progressRatio = totalCount > 0 ? completedCount / totalCount : 0;
+  const progressPercent = Math.round(progressRatio * 100);
+  const progressDegrees = progressRatio * 360;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden mb-8">
@@ -104,6 +120,13 @@ export function ImageFilesSection({
                     >
                       <GripVertical className="w-5 h-5" />
                     </div>
+
+                    <MoveFileButtons
+                      canMoveUp={index > 0}
+                      canMoveDown={index < files.length - 1}
+                      onMoveUp={() => onMove(file.id, 'up')}
+                      onMoveDown={() => onMove(file.id, 'down')}
+                    />
 
                     <input
                       type="checkbox"
@@ -204,11 +227,44 @@ export function ImageFilesSection({
         )}
       </Droppable>
 
-      <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex justify-between items-center overflow-x-auto">
-        <span className="text-sm text-zinc-500 whitespace-nowrap min-w-max mr-4">
-          {selectedIds.size} image(s) selected
-        </span>
-        <div className="flex gap-3">
+      <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex flex-col gap-4">
+        {isConverting && conversionProgress && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 md:flex-row md:items-center md:gap-4" role="status" aria-live="polite">
+            <div
+              className="relative h-16 w-16 shrink-0 rounded-full"
+              style={{ background: `conic-gradient(#16a34a ${progressDegrees}deg, #bbf7d0 ${progressDegrees}deg 360deg)` }}
+              aria-hidden="true"
+            >
+              <div className="absolute inset-2 flex items-center justify-center rounded-full bg-white text-sm font-semibold text-emerald-700">
+                {progressPercent}%
+              </div>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                <p className="text-sm font-semibold text-emerald-900">Converting images to PDF</p>
+                <p className="text-sm font-medium text-emerald-700">{completedCount}/{totalCount}</p>
+              </div>
+              <p className="truncate text-xs text-emerald-700">
+                {conversionProgress.currentFileName
+                  ? `Now converting ${conversionProgress.currentFileName}`
+                  : 'Finalizing converted files'}
+              </p>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between overflow-x-auto">
+          <span className="text-sm text-zinc-500 whitespace-nowrap min-w-max mr-4">
+            {selectedIds.size} image(s) selected
+          </span>
+          <div className="flex gap-3">
           <button
             onClick={onDeleteSelected}
             disabled={selectedIds.size === 0}
@@ -279,6 +335,7 @@ export function ImageFilesSection({
               </>
             )}
           </button>
+          </div>
         </div>
       </div>
     </div>

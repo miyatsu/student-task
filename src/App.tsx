@@ -18,6 +18,7 @@ import {
   duplicateAppFile,
   getNextSortConfig,
   isSupportedFile,
+  moveAppFile,
   partitionAppFiles,
   removeAppFile,
   removeSelectedFiles,
@@ -60,6 +61,11 @@ export default function App() {
   const [extractingTextId, setExtractingTextId] = useState<string | null>(null);
   const [extractingImagesId, setExtractingImagesId] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<AppFile | null>(null);
+  const [imageConversionProgress, setImageConversionProgress] = useState<{
+    completed: number;
+    total: number;
+    currentFileName: string | null;
+  } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -159,6 +165,19 @@ export default function App() {
     } else if (type === 'word') {
       setWordSort(newConfig);
       setWordFiles(prev => sortAppFiles(prev, newConfig));
+    }
+  };
+
+  const moveFile = (type: AppFile['type'], id: string, direction: 'up' | 'down') => {
+    if (type === 'pdf') {
+      setPdfFiles(prev => moveAppFile(prev, id, direction));
+      setPdfSort(null);
+    } else if (type === 'image') {
+      setImageFiles(prev => moveAppFile(prev, id, direction));
+      setImageSort(null);
+    } else {
+      setWordFiles(prev => moveAppFile(prev, id, direction));
+      setWordSort(null);
     }
   };
 
@@ -365,10 +384,21 @@ export default function App() {
 
     setIsConverting(true);
     setConversionError(null);
+    setImageConversionProgress({
+      completed: 0,
+      total: selectedImgs.length,
+      currentFileName: selectedImgs[0]?.name ?? null,
+    });
     try {
       const newPdfs: AppFile[] = [];
       
-      for (const img of selectedImgs) {
+      for (const [index, img] of selectedImgs.entries()) {
+        setImageConversionProgress({
+          completed: index,
+          total: selectedImgs.length,
+          currentFileName: img.name,
+        });
+
         try {
           const pdfDoc = await PDFDocument.create();
           const { image } = await embedImageFileInPdf(pdfDoc, img.file);
@@ -386,6 +416,12 @@ export default function App() {
             name: newName,
             size: newFile.size,
             type: 'pdf'
+          });
+
+          setImageConversionProgress({
+            completed: index + 1,
+            total: selectedImgs.length,
+            currentFileName: selectedImgs[index + 1]?.name ?? null,
           });
         } catch (error) {
           throw new Error(buildImageToPdfErrorMessage(img.name, error));
@@ -405,6 +441,7 @@ export default function App() {
       setConversionError(message);
       alert(message);
     } finally {
+      setImageConversionProgress(null);
       setIsConverting(false);
     }
   };
@@ -837,6 +874,7 @@ export default function App() {
               onToggleAll={toggleAllImages}
               onToggleSelection={toggleImageSelection}
               onSort={(key) => handleSort('image', key)}
+              onMove={(id, direction) => moveFile('image', id, direction)}
               onOpenPreview={openPreview}
               onDuplicate={(file) => duplicateFile(file, 'image')}
               onRotate={rotateImage}
@@ -850,6 +888,7 @@ export default function App() {
               isCompressing={isCompressing}
               onConvertSelected={convertSelectedImages}
               isConverting={isConverting}
+              conversionProgress={imageConversionProgress}
             />
 
             <PdfFilesSection
@@ -865,6 +904,7 @@ export default function App() {
               onToggleAll={toggleAllPdfs}
               onToggleSelection={togglePdfSelection}
               onSort={(key) => handleSort('pdf', key)}
+              onMove={(id, direction) => moveFile('pdf', id, direction)}
               onOpenPreview={openPreview}
               onDuplicate={(file) => duplicateFile(file, 'pdf')}
               onAskAi={openAiAssistant}
@@ -894,6 +934,7 @@ export default function App() {
               onToggleAll={toggleAllWords}
               onToggleSelection={toggleWordSelection}
               onSort={(key) => handleSort('word', key)}
+              onMove={(id, direction) => moveFile('word', id, direction)}
               onOpenPreview={openPreview}
               onDuplicate={(file) => duplicateFile(file, 'word')}
               onAskAi={openAiAssistant}

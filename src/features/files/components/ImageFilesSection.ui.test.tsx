@@ -55,6 +55,7 @@ function createProps(overrides: Partial<ComponentProps<typeof ImageFilesSection>
     onToggleAll: overrides.onToggleAll ?? vi.fn(),
     onToggleSelection: overrides.onToggleSelection ?? vi.fn(),
     onSort: overrides.onSort ?? vi.fn(),
+    onMove: overrides.onMove ?? vi.fn(),
     onOpenPreview: overrides.onOpenPreview ?? vi.fn(),
     onDuplicate: overrides.onDuplicate ?? vi.fn(),
     onRotate: overrides.onRotate ?? vi.fn(),
@@ -68,6 +69,7 @@ function createProps(overrides: Partial<ComponentProps<typeof ImageFilesSection>
     isCompressing: overrides.isCompressing ?? false,
     onConvertSelected: overrides.onConvertSelected ?? vi.fn(),
     isConverting: overrides.isConverting ?? false,
+    conversionProgress: overrides.conversionProgress ?? null,
   };
 }
 
@@ -88,6 +90,9 @@ describe('ImageFilesSection', () => {
 
     await user.click(row.getByTitle('Duplicate'));
     expect(props.onDuplicate).toHaveBeenCalledWith(props.files[0]);
+
+    await user.click(row.getByTitle('Move down'));
+    expect(props.onMove).toHaveBeenCalledWith('image-1', 'down');
 
     await user.click(row.getByTitle('Rotate 90°'));
     expect(props.onRotate).toHaveBeenCalledWith(props.files[0]);
@@ -128,6 +133,23 @@ describe('ImageFilesSection', () => {
 
     await user.click(screen.getByRole('button', { name: 'Convert to PDF' }));
     expect(props.onConvertSelected).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows image conversion progress details while converting', () => {
+    const props = createProps({
+      isConverting: true,
+      conversionProgress: {
+        completed: 1,
+        total: 3,
+        currentFileName: 'receipt.png',
+      },
+    });
+
+    render(<ImageFilesSection {...props} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Converting images to PDF');
+    expect(screen.getByRole('status')).toHaveTextContent('1/3');
+    expect(screen.getByRole('status')).toHaveTextContent('Now converting receipt.png');
   });
 
   it('saves inline rename edits with the current file id', async () => {

@@ -5,6 +5,7 @@ import { formatBytes, selectFilesByIds } from '../file-utils';
 import type { AppFile, SortConfig, SortKey } from '../types';
 import { EditableFileNameCell } from './EditableFileNameCell';
 import { FileSectionHeader } from './FileSectionHeader';
+import { MoveFileButtons } from './MoveFileButtons';
 
 type CompressionLevel = 'low' | 'medium' | 'high';
 
@@ -21,6 +22,7 @@ interface PdfFilesSectionProps {
   onToggleAll: () => void;
   onToggleSelection: (id: string) => void;
   onSort: (key: SortKey) => void;
+  onMove: (id: string, direction: 'up' | 'down') => void;
   onOpenPreview: (file: AppFile) => void;
   onDuplicate: (file: AppFile) => void;
   onAskAi: (files: AppFile[]) => void;
@@ -50,6 +52,7 @@ export function PdfFilesSection({
   onToggleAll,
   onToggleSelection,
   onSort,
+  onMove,
   onOpenPreview,
   onDuplicate,
   onAskAi,
@@ -106,6 +109,13 @@ export function PdfFilesSection({
                     >
                       <GripVertical className="w-5 h-5" />
                     </div>
+
+                    <MoveFileButtons
+                      canMoveUp={index > 0}
+                      canMoveDown={index < files.length - 1}
+                      onMoveUp={() => onMove(file.id, 'up')}
+                      onMoveDown={() => onMove(file.id, 'down')}
+                    />
 
                     <input
                       type="checkbox"

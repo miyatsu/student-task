@@ -55,6 +55,7 @@ function createProps(overrides: Partial<ComponentProps<typeof WordFilesSection>>
     onToggleAll: overrides.onToggleAll ?? vi.fn(),
     onToggleSelection: overrides.onToggleSelection ?? vi.fn(),
     onSort: overrides.onSort ?? vi.fn(),
+    onMove: overrides.onMove ?? vi.fn(),
     onOpenPreview: overrides.onOpenPreview ?? vi.fn(),
     onDuplicate: overrides.onDuplicate ?? vi.fn(),
     onAskAi: overrides.onAskAi ?? vi.fn(),
@@ -82,6 +83,9 @@ describe('WordFilesSection', () => {
 
     await user.click(row.getByTitle('Duplicate'));
     expect(props.onDuplicate).toHaveBeenCalledWith(props.files[0]);
+
+    await user.click(row.getByTitle('Move down'));
+    expect(props.onMove).toHaveBeenCalledWith('word-1', 'down');
 
     await user.click(row.getByTitle('Preview File'));
     expect(props.onOpenPreview).toHaveBeenCalledWith(props.files[0]);
