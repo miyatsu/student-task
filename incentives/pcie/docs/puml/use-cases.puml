@@ -1,0 +1,23 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "普通用户" as User
+
+rectangle "多功能文件处理系统" {
+  usecase "文件上传与管理 (拖拽, 排序)" as UC_Manage
+  usecase "图像画质增强 (AI 本地模型)" as UC_ImageEnhance
+  usecase "PDF 拆分、合并与重新排序" as UC_PdfEdit
+  usecase "Word/PDF 文本提取及合并" as UC_TextExtract
+  usecase "AI 助手对话分析 (基于选中文件)" as UC_AiChat
+  usecase "文件压缩与导出为 Zip" as UC_Export
+}
+
+User --> UC_Manage
+User --> UC_ImageEnhance
+User --> UC_PdfEdit
+User --> UC_TextExtract
+User --> UC_AiChat
+User --> UC_Export
+
+@enduml
