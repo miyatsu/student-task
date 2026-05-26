@@ -3,8 +3,11 @@ import { Copy, Eye, FileArchive, FileText, GripVertical, Image as ImageIcon, Loa
 
 import { formatBytes, selectFilesByIds } from '../file-utils';
 import type { AppFile, SortConfig, SortKey } from '../types';
+import type { ConversionProgressValue } from './ConversionProgressCard';
+import { ConversionProgressCard } from './ConversionProgressCard';
 import { EditableFileNameCell } from './EditableFileNameCell';
 import { FileSectionHeader } from './FileSectionHeader';
+import { MoveFileButtons } from './MoveFileButtons';
 
 type CompressionLevel = 'low' | 'medium' | 'high';
 
@@ -21,6 +24,7 @@ interface ImageFilesSectionProps {
   onToggleAll: () => void;
   onToggleSelection: (id: string) => void;
   onSort: (key: SortKey) => void;
+  onMove: (id: string, direction: 'up' | 'down') => void;
   onOpenPreview: (file: AppFile) => void;
   onDuplicate: (file: AppFile) => void;
   onRotate: (file: AppFile) => void;
@@ -34,6 +38,7 @@ interface ImageFilesSectionProps {
   isCompressing: boolean;
   onConvertSelected: () => void;
   isConverting: boolean;
+  conversionProgress: ConversionProgressValue | null;
 }
 
 export function ImageFilesSection({
@@ -49,6 +54,7 @@ export function ImageFilesSection({
   onToggleAll,
   onToggleSelection,
   onSort,
+  onMove,
   onOpenPreview,
   onDuplicate,
   onRotate,
@@ -62,6 +68,7 @@ export function ImageFilesSection({
   isCompressing,
   onConvertSelected,
   isConverting,
+  conversionProgress,
 }: ImageFilesSectionProps) {
   if (files.length === 0) {
     return null;
@@ -105,6 +112,13 @@ export function ImageFilesSection({
                       <GripVertical className="w-5 h-5" />
                     </div>
 
+                    <MoveFileButtons
+                      canMoveUp={index > 0}
+                      canMoveDown={index < files.length - 1}
+                      onMoveUp={() => onMove(file.id, 'up')}
+                      onMoveDown={() => onMove(file.id, 'down')}
+                    />
+
                     <input
                       type="checkbox"
                       checked={selectedIds.has(file.id)}
@@ -136,7 +150,11 @@ export function ImageFilesSection({
                         onStartRename(file);
                       }}
                     >
-                      <button onClick={(event) => { event.stopPropagation(); onDuplicate(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">
+                      <button
+                        onClick={(event) => { event.stopPropagation(); onDuplicate(file); }}
+                        className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-white p-1.5 text-zinc-500 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                        title="Duplicate"
+                      >
                         <Copy className="w-4 h-4" />
                       </button>
                       <button onClick={(event) => { event.stopPropagation(); onRotate(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Rotate 90°">
@@ -204,81 +222,87 @@ export function ImageFilesSection({
         )}
       </Droppable>
 
-      <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex justify-between items-center overflow-x-auto">
-        <span className="text-sm text-zinc-500 whitespace-nowrap min-w-max mr-4">
-          {selectedIds.size} image(s) selected
-        </span>
-        <div className="flex gap-3">
-          <button
-            onClick={onDeleteSelected}
-            disabled={selectedIds.size === 0}
-            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm shrink-0 whitespace-nowrap
-              ${selectedIds.size === 0
-                ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                : 'bg-red-50 text-red-600 hover:bg-red-100 shadow-sm hover:shadow active:scale-[0.98]'
-              }
-            `}
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete Selected
-          </button>
-          <button
-            onClick={() => onAskAi(selectedFiles)}
-            disabled={selectedIds.size === 0}
-            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm shrink-0 whitespace-nowrap
-              ${selectedIds.size === 0
-                ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 shadow-sm hover:shadow active:scale-[0.98]'
-              }
-            `}
-          >
-            <Sparkles className="w-4 h-4" />
-            Ask AI
-          </button>
-          <div className="flex items-center">
-            <div className={`relative flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap border
-              ${selectedIds.size === 0 || isCompressing
-                ? 'bg-zinc-50 text-zinc-400 border-zinc-200 cursor-not-allowed'
-                : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 active:bg-indigo-100 shadow-sm cursor-pointer'
-              }`}
+      <div className="px-6 py-4 border-t border-zinc-200 bg-zinc-50/50 flex flex-col gap-4">
+        {isConverting && conversionProgress && (
+          <ConversionProgressCard title="Converting images to PDF" progress={conversionProgress} />
+        )}
+
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between overflow-x-auto">
+          <span className="text-sm text-zinc-500 whitespace-nowrap min-w-max mr-4">
+            {selectedIds.size} image(s) selected
+          </span>
+          <div className="flex gap-3">
+            <button
+              onClick={onDeleteSelected}
+              disabled={selectedIds.size === 0}
+              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm shrink-0 whitespace-nowrap
+                ${selectedIds.size === 0
+                  ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                  : 'bg-red-50 text-red-600 hover:bg-red-100 shadow-sm hover:shadow active:scale-[0.98]'
+                }
+              `}
             >
-              {isCompressing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileArchive className="w-4 h-4" />}
-              {isCompressing ? 'Compressing...' : 'Compress As...'}
-              <select
-                value=""
-                onChange={(event) => onCompress(event.target.value as CompressionLevel)}
-                disabled={selectedIds.size === 0 || isCompressing}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+              <Trash2 className="w-4 h-4" />
+              Delete Selected
+            </button>
+            <button
+              onClick={() => onAskAi(selectedFiles)}
+              disabled={selectedIds.size === 0}
+              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm shrink-0 whitespace-nowrap
+                ${selectedIds.size === 0
+                  ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                  : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 shadow-sm hover:shadow active:scale-[0.98]'
+                }
+              `}
+            >
+              <Sparkles className="w-4 h-4" />
+              Ask AI
+            </button>
+            <div className="flex items-center">
+              <div className={`relative flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap border
+                ${selectedIds.size === 0 || isCompressing
+                  ? 'bg-zinc-50 text-zinc-400 border-zinc-200 cursor-not-allowed'
+                  : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 active:bg-indigo-100 shadow-sm cursor-pointer'
+                }`}
               >
-                <option value="" disabled>Select Ratio...</option>
-                <option value="low">Low Quality (Smallest)</option>
-                <option value="medium">Medium Quality (Recommended)</option>
-                <option value="high">High Quality (Largest)</option>
-              </select>
+                {isCompressing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileArchive className="w-4 h-4" />}
+                {isCompressing ? 'Compressing...' : 'Compress As...'}
+                <select
+                  value=""
+                  onChange={(event) => onCompress(event.target.value as CompressionLevel)}
+                  disabled={selectedIds.size === 0 || isCompressing}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <option value="" disabled>Select Ratio...</option>
+                  <option value="low">Low Quality (Smallest)</option>
+                  <option value="medium">Medium Quality (Recommended)</option>
+                  <option value="high">High Quality (Largest)</option>
+                </select>
+              </div>
             </div>
+            <button
+              onClick={onConvertSelected}
+              disabled={selectedIds.size === 0 || isConverting}
+              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm
+                ${selectedIds.size === 0 || isConverting
+                  ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow active:scale-[0.98]'
+                }
+              `}
+            >
+              {isConverting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Converting...
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4" />
+                  Convert to PDF
+                </>
+              )}
+            </button>
           </div>
-          <button
-            onClick={onConvertSelected}
-            disabled={selectedIds.size === 0 || isConverting}
-            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all text-sm
-              ${selectedIds.size === 0 || isConverting
-                ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow active:scale-[0.98]'
-              }
-            `}
-          >
-            {isConverting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Converting...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4" />
-                Convert to PDF
-              </>
-            )}
-          </button>
         </div>
       </div>
     </div>

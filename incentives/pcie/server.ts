@@ -15,6 +15,7 @@ import {
   resolvePdfCompressionSettings,
 } from "./src/server/compression.ts";
 import { readRuntimeConfig } from "./src/server/runtime-config.ts";
+import { extractLegacyWordHtml } from "./src/server/word-conversion.ts";
 
 dotenv.config({ quiet: true });
 
@@ -41,6 +42,30 @@ async function startServer() {
   app.get("/api/runtime-config", (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.json(readRuntimeConfig());
+  });
+
+  app.post("/api/word/extract-html", upload.single("word"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "No Word file uploaded" });
+    }
+
+    const inputPath = req.file.path;
+
+    try {
+      const documentBuffer = fs.readFileSync(inputPath);
+      const html = await extractLegacyWordHtml(documentBuffer);
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ html });
+    } catch (error) {
+      console.error("Legacy Word extraction error:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      try {
+        if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      } catch (cleanupError) {}
+    }
   });
 
   const jobs = new Map<string, { status: string, outputPath: string, inputPath: string, error?: string }>();

@@ -1,5 +1,10 @@
 import type { AppFile, AppFileType, SortConfig, SortKey } from './types';
 
+const fileNameCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: 'base',
+});
+
 const supportedImageMimeTypes = new Set(['image/png', 'image/jpeg', 'image/jpg']);
 const supportedMimeTypes = new Set([
   'application/pdf',
@@ -113,6 +118,23 @@ export function removeSelectedFiles(files: AppFile[], selectedIds: Set<string>) 
   return files.filter((file) => !selectedIds.has(file.id));
 }
 
+export function moveAppFile(files: AppFile[], id: string, direction: 'up' | 'down') {
+  const index = files.findIndex((file) => file.id === id);
+
+  if (index === -1) {
+    return files;
+  }
+
+  const targetIndex = direction === 'up' ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= files.length) {
+    return files;
+  }
+
+  const reorderedFiles = [...files];
+  [reorderedFiles[index], reorderedFiles[targetIndex]] = [reorderedFiles[targetIndex], reorderedFiles[index]];
+  return reorderedFiles;
+}
+
 export function getNextSortConfig(currentConfig: SortConfig | null, key: SortKey): SortConfig {
   return {
     key,
@@ -123,7 +145,7 @@ export function getNextSortConfig(currentConfig: SortConfig | null, key: SortKey
 function compareFiles(left: AppFile, right: AppFile, key: SortKey) {
   switch (key) {
     case 'name':
-      return left.name.localeCompare(right.name);
+      return fileNameCollator.compare(left.name, right.name);
     case 'size':
       return left.size - right.size;
     case 'date':

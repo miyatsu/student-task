@@ -27,18 +27,43 @@ export interface AppFile {
 3. 用 `[...array].splice()` 完成放置并重新更新 AppFile 的 Hook状态，触发列表重新渲染。
 这也同样附带了清理对应的独立排序过滤器 `setImageSort(null)`。
 
-### 2.2 本地拷贝机制
+在拖拽之外，文件列表现在还提供了行内“上移 / 下移”按钮。它们与拖拽共享同一套重排思路：调用 `src/features/files/file-utils.ts` 中的纯函数交换相邻元素位置，并在发生人工重排后清空当前分组的排序配置，使界面明确回到“手动顺序优先”的状态。
+
+### 2.2 自然排序与文件列表纯逻辑下沉
+文件领域的共用逻辑现在集中在 `[src/features/files/file-utils.ts](../src/features/files/file-utils.ts)`。其中名称排序不再使用简单字典序，而是通过 `Intl.Collator(..., { numeric: true })` 执行自然排序，让 `file2.pdf`、`file10.pdf` 这类带数字块的文件名更贴近日常认知。
+
+与之配套，区头的 `NAME / DATE / SIZE` 不再只是轻量文字标签，而是改成了更明确的排序胶囊按钮：未激活时显示通用排序图标，激活后会切换为升降序箭头和高亮状态，降低用户把它误认成普通说明文字的概率。
+
+### 2.3 本地拷贝机制
 `duplicateFile` 功能实现非常直接。因全部文件缓存在浏览器的 RAM 中（File 对象），无需调用服务端，仅仅需要在逻辑上复制 `File` 的二进制片段并在列表末尾注入即可（重新分配一个不同的随机 `id` 和一个 `-copy` 为命名的逻辑名称）。
+
+最近的 UI 调整里，`Rename` 与 `Duplicate` 不再依赖 hover 才显示，而是作为文件名右侧的常驻弱强调图标呈现。这样既保留了紧凑的列表密度，又避免把高频操作藏到“只有试过 hover 才知道”的交互层级里。
 
 当前这些与文件领域相关的纯逻辑已经集中到 `[src/features/files/file-utils.ts](../src/features/files/file-utils.ts)`，包括：
 
 1. 文件类型识别与分组
 2. 选择切换与全选/反选
-3. 排序配置推导与排序执行
+3. 排序配置推导、自然排序执行与手动移动
 4. 文件重命名与复制
 5. Zip 导出时的重名消解
 
 这让 `App.tsx` 主要保留状态编排和 UI 交互流程，而把可单测的无副作用逻辑下沉到独立模块。
+
+### 2.4 图片 / Word 转 PDF 进度反馈
+图片和 Word 的批量转 PDF 都仍然在 `[src/App.tsx](../src/App.tsx)` 中顺序执行，但现在额外维护了局部进度状态：已完成数量、总数量，以及当前正在处理的文件名。`ImageFilesSection` 与 `WordFilesSection` 通过共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)` 渲染同一套绿色进度卡片，同时提供环形百分比、横向进度条和 `x/y` 数字反馈。
+
+这样做有两个直接收益：
+1. 用户在多文件转换时能确认任务没有卡死，而是在逐份推进。
+2. 如果某一个源文件报错，界面可以把失败文件名和底层错误一起暴露出来，而不是只显示一个模糊的通用提示。
+
+### 2.5 旧版 `.doc` 转 PDF 路径
+`mammoth` 的能力边界本质上是 `DOCX -> HTML`，因此旧版二进制 `.doc` 不能直接复用浏览器端转换链。当前实现的策略是按格式分流：
+
+1. `.docx`：继续在浏览器中调用 `mammoth.convertToHtml()`，最大化保留语义化结构。
+2. `.doc`：通过 `[server.ts](../server.ts)` 上传到 `/api/word/extract-html`，由 `[src/server/word-conversion.ts](../src/server/word-conversion.ts)` 调用 `word-extractor` 提取正文、页眉页脚、脚注、批注和文本框中的可读文本。
+3. 服务端把这些文本做 HTML 转义并包装成段落 / 分节结构，再回传给前端，最终仍由现有的 `html2pdf.js` 流程生成 PDF。
+
+这种方式的优势是无需要求宿主机额外安装 Word、LibreOffice 或任何本地 Office 组件；代价是对于老 `.doc` 的复杂版式，只能保证可读文本尽可能完整，无法像 `DOCX` 一样高保真地恢复样式布局。
 
 <a id="ai-image-enhancement"></a>
 ## 3. UI无缝结合的 AI 本地放大器算法
@@ -96,5 +121,6 @@ Modal --> User: 关闭增强弹窗
 
 1. `[src/server/runtime-config.ts](../src/server/runtime-config.ts)` 统一负责运行时 Gemini 配置读取与裁剪，避免环境变量读取分散在路由中。
 2. `[src/server/compression.ts](../src/server/compression.ts)` 负责 PDF 压缩等级映射、压缩任务 ID 生成以及 Ghostscript 命令拼装。
+3. `[src/server/word-conversion.ts](../src/server/word-conversion.ts)` 负责旧版 `.doc` 的文本提取、HTML 转义与结构化包装。
 
 这样一来，`server.ts` 主要保留 Express 路由与请求流转，而可预测、可复用的纯逻辑则能通过自动化测试直接验证。

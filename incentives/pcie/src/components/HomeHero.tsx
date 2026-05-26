@@ -4,25 +4,25 @@ const heroHighlights = [
   {
     icon: Files,
     title: 'Unified intake',
-    description: 'Drop PDFs, PNG/JPG images, and Word documents into one sortable workspace.',
+    description: 'Drop in PDFs, images, and Word files.',
     accentClass: 'bg-sky-50 text-sky-700 border-sky-100',
   },
   {
     icon: FileText,
     title: 'Edit and convert',
-    description: 'Merge or compress PDFs, extract pages and images, and turn images or Word files into PDF output.',
+    description: 'Merge, split, compress, and convert.',
     accentClass: 'bg-amber-50 text-amber-700 border-amber-100',
   },
   {
     icon: Wand2,
     title: 'Enhance and read',
-    description: 'Enhance images locally, preview files, and extract text or OCR results when you need them.',
+    description: 'Upscale images. Preview fast. Pull text.',
     accentClass: 'bg-emerald-50 text-emerald-700 border-emerald-100',
   },
   {
     icon: Download,
     title: 'Review and export',
-    description: 'Select outputs across sections, ask AI about them, and download everything together as a ZIP.',
+    description: 'Review results, ask AI, export ZIPs.',
     accentClass: 'bg-rose-50 text-rose-700 border-rose-100',
   },
 ];
@@ -31,12 +31,12 @@ const trustSignals = [
   {
     icon: Lock,
     title: 'Local-first processing',
-    description: 'Core document editing, conversion, enhancement, and export stay in your browser by default.',
+    description: 'Editing and export stay in-browser by default.',
   },
   {
     icon: Sparkles,
     title: 'Gemini when you choose it',
-    description: 'AI chat and OCR are optional. Enable a Gemini key only when you want those cloud-assisted features.',
+    description: 'AI stays off until you add a key.',
   },
 ];
 
@@ -59,15 +59,15 @@ export default function HomeHero() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-1 text-sm font-medium text-sky-700">
                 <ImageIcon className="h-4 w-4" />
-                One board for file prep, editing, extraction, and export
+                Sort. Convert. Extract. Export.
               </div>
 
               <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-zinc-950 md:text-5xl md:leading-[1.05]">
-                Process PDFs, images, and Word files from a single workspace.
+                One workspace for PDFs, images, and Word.
               </h1>
 
               <p className="mt-5 max-w-3xl text-base leading-8 text-zinc-600 md:text-lg">
-                Upload mixed batches, sort them by type, convert images and Word files to PDF, merge or compress PDFs, extract pages, images, and text, enhance pictures locally, and export the results together. Turn on Gemini only when you want AI chat or OCR.
+                Drop in mixed files. Reorder fast. Turn images and Word into PDF. Merge, compress, extract, enhance, then export.
               </p>
 
               <div className="mt-6 grid gap-3 md:grid-cols-2">

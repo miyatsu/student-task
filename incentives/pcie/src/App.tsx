@@ -11,11 +11,14 @@ import HomeHero from './components/HomeHero';
 import imageCompression from 'browser-image-compression';
 import {
   AppFile,
+  buildImageToPdfErrorMessage,
+  embedImageFileInPdf,
   SortConfig,
   SortKey,
   duplicateAppFile,
   getNextSortConfig,
   isSupportedFile,
+  moveAppFile,
   partitionAppFiles,
   removeAppFile,
   removeSelectedFiles,
@@ -58,6 +61,16 @@ export default function App() {
   const [extractingTextId, setExtractingTextId] = useState<string | null>(null);
   const [extractingImagesId, setExtractingImagesId] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<AppFile | null>(null);
+  const [imageConversionProgress, setImageConversionProgress] = useState<{
+    completed: number;
+    total: number;
+    currentFileName: string | null;
+  } | null>(null);
+  const [wordConversionProgress, setWordConversionProgress] = useState<{
+    completed: number;
+    total: number;
+    currentFileName: string | null;
+  } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -157,6 +170,19 @@ export default function App() {
     } else if (type === 'word') {
       setWordSort(newConfig);
       setWordFiles(prev => sortAppFiles(prev, newConfig));
+    }
+  };
+
+  const moveFile = (type: AppFile['type'], id: string, direction: 'up' | 'down') => {
+    if (type === 'pdf') {
+      setPdfFiles(prev => moveAppFile(prev, id, direction));
+      setPdfSort(null);
+    } else if (type === 'image') {
+      setImageFiles(prev => moveAppFile(prev, id, direction));
+      setImageSort(null);
+    } else {
+      setWordFiles(prev => moveAppFile(prev, id, direction));
+      setWordSort(null);
     }
   };
 
@@ -297,16 +323,76 @@ export default function App() {
     setSelectedPdfIds(new Set());
   };
 
+  const isLegacyWordFile = (file: File) => {
+    const lowerCaseFileName = file.name.toLowerCase();
+    return lowerCaseFileName.endsWith('.doc') && !lowerCaseFileName.endsWith('.docx');
+  };
+
+  const buildWordToPdfErrorMessage = (fileName: string, error: unknown) => {
+    if (error instanceof Error && error.message.trim()) {
+      return `Failed to convert "${fileName}" to PDF: ${error.message.trim()}`;
+    }
+
+    return `Failed to convert "${fileName}" to PDF: ${String(error)}`;
+  };
+
+  const extractLegacyWordHtml = async (file: File) => {
+    const formData = new FormData();
+    formData.append('word', file);
+
+    const response = await fetch('/api/word/extract-html', {
+      method: 'POST',
+      body: formData,
+    });
+
+    let payload: { html?: string; error?: string } | null = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      throw new Error(payload?.error || `Server returned ${response.status} while reading the .doc file.`);
+    }
+
+    if (!payload?.html) {
+      throw new Error('Server did not return readable HTML for the .doc file.');
+    }
+
+    return payload.html;
+  };
+
+  const convertWordFileToHtml = async (word: AppFile) => {
+    if (isLegacyWordFile(word.file)) {
+      return extractLegacyWordHtml(word.file);
+    }
+
+    const arrayBuffer = await word.file.arrayBuffer();
+    const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
+    return html;
+  };
+
   const convertSelectedWords = async () => {
     const selected = selectFilesByIds(wordFiles, selectedWordIds);
     if (selected.length === 0) return;
 
     setIsConverting(true);
+    setWordConversionProgress({
+      completed: 0,
+      total: selected.length,
+      currentFileName: selected[0]?.name ?? null,
+    });
     try {
       const newPdfs: AppFile[] = [];
-      for (const word of selected) {
-        const arrayBuffer = await word.file.arrayBuffer();
-        const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
+      for (const [index, word] of selected.entries()) {
+        setWordConversionProgress({
+          completed: index,
+          total: selected.length,
+          currentFileName: word.name,
+        });
+
+        const html = await convertWordFileToHtml(word);
         
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
@@ -341,6 +427,12 @@ export default function App() {
             size: newFile.size,
             type: 'pdf'
           });
+
+          setWordConversionProgress({
+            completed: index + 1,
+            total: selected.length,
+            currentFileName: selected[index + 1]?.name ?? null,
+          });
         } finally {
           document.body.removeChild(tempDiv);
         }
@@ -351,8 +443,10 @@ export default function App() {
       alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF!`);
     } catch (error) {
       console.error(error);
-      alert('Error during conversion. Ensure the Word file is a valid DOCX.');
+      const activeFileName = wordConversionProgress?.currentFileName ?? selected[0]?.name ?? 'selected Word document';
+      alert(buildWordToPdfErrorMessage(activeFileName, error));
     } finally {
+      setWordConversionProgress(null);
       setIsConverting(false);
     }
   };
@@ -362,33 +456,49 @@ export default function App() {
     if (selectedImgs.length === 0) return;
 
     setIsConverting(true);
+    setConversionError(null);
+    setImageConversionProgress({
+      completed: 0,
+      total: selectedImgs.length,
+      currentFileName: selectedImgs[0]?.name ?? null,
+    });
     try {
       const newPdfs: AppFile[] = [];
       
-      for (const img of selectedImgs) {
-        const pdfDoc = await PDFDocument.create();
-        const arrayBuffer = await img.file.arrayBuffer();
-        let image;
-        if (img.file.type === 'image/png') {
-          image = await pdfDoc.embedPng(arrayBuffer);
-        } else {
-          image = await pdfDoc.embedJpg(arrayBuffer);
-        }
-        const page = pdfDoc.addPage([image.width, image.height]);
-        page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
-        const pdfBytes = await pdfDoc.save();
-        
-        const baseName = img.name.replace(/\.[^/.]+$/, "");
-        const newName = `${baseName}.pdf`;
-        const newFile = new File([pdfBytes], newName, { type: 'application/pdf' });
-        
-        newPdfs.push({
-          id: Math.random().toString(36).substring(7),
-          file: newFile,
-          name: newName,
-          size: newFile.size,
-          type: 'pdf'
+      for (const [index, img] of selectedImgs.entries()) {
+        setImageConversionProgress({
+          completed: index,
+          total: selectedImgs.length,
+          currentFileName: img.name,
         });
+
+        try {
+          const pdfDoc = await PDFDocument.create();
+          const { image } = await embedImageFileInPdf(pdfDoc, img.file);
+          const page = pdfDoc.addPage([image.width, image.height]);
+          page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+          const pdfBytes = await pdfDoc.save();
+          
+          const baseName = img.name.replace(/\.[^/.]+$/, "");
+          const newName = `${baseName}.pdf`;
+          const newFile = new File([pdfBytes], newName, { type: 'application/pdf' });
+          
+          newPdfs.push({
+            id: Math.random().toString(36).substring(7),
+            file: newFile,
+            name: newName,
+            size: newFile.size,
+            type: 'pdf'
+          });
+
+          setImageConversionProgress({
+            completed: index + 1,
+            total: selectedImgs.length,
+            currentFileName: selectedImgs[index + 1]?.name ?? null,
+          });
+        } catch (error) {
+          throw new Error(buildImageToPdfErrorMessage(img.name, error));
+        }
       }
       
       setPdfFiles(prev => [...prev, ...newPdfs]);
@@ -397,9 +507,14 @@ export default function App() {
       // Clear selection of images after conversion, but keep the images in the list
       setSelectedImageIds(new Set());
     } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : buildImageToPdfErrorMessage('selected image', error);
       console.error("Error converting images:", error);
-      alert("An error occurred while converting images.");
+      setConversionError(message);
+      alert(message);
     } finally {
+      setImageConversionProgress(null);
       setIsConverting(false);
     }
   };
@@ -832,6 +947,7 @@ export default function App() {
               onToggleAll={toggleAllImages}
               onToggleSelection={toggleImageSelection}
               onSort={(key) => handleSort('image', key)}
+              onMove={(id, direction) => moveFile('image', id, direction)}
               onOpenPreview={openPreview}
               onDuplicate={(file) => duplicateFile(file, 'image')}
               onRotate={rotateImage}
@@ -845,6 +961,7 @@ export default function App() {
               isCompressing={isCompressing}
               onConvertSelected={convertSelectedImages}
               isConverting={isConverting}
+              conversionProgress={imageConversionProgress}
             />
 
             <PdfFilesSection
@@ -860,6 +977,7 @@ export default function App() {
               onToggleAll={toggleAllPdfs}
               onToggleSelection={togglePdfSelection}
               onSort={(key) => handleSort('pdf', key)}
+              onMove={(id, direction) => moveFile('pdf', id, direction)}
               onOpenPreview={openPreview}
               onDuplicate={(file) => duplicateFile(file, 'pdf')}
               onAskAi={openAiAssistant}
@@ -889,6 +1007,7 @@ export default function App() {
               onToggleAll={toggleAllWords}
               onToggleSelection={toggleWordSelection}
               onSort={(key) => handleSort('word', key)}
+              onMove={(id, direction) => moveFile('word', id, direction)}
               onOpenPreview={openPreview}
               onDuplicate={(file) => duplicateFile(file, 'word')}
               onAskAi={openAiAssistant}
@@ -896,6 +1015,7 @@ export default function App() {
               onDeleteSelected={deleteSelectedWords}
               onConvertSelected={convertSelectedWords}
               isConverting={isConverting}
+              conversionProgress={wordConversionProgress}
             />
 
           </DragDropContext>

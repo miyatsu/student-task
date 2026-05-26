@@ -5,6 +5,7 @@ import {
   duplicateAppFile,
   getNextSortConfig,
   isSupportedFile,
+  moveAppFile,
   partitionAppFiles,
   removeSelectedFiles,
   renameAppFile,
@@ -80,14 +81,17 @@ describe('file-utils', () => {
     assert.deepEqual(secondSort, { key: 'name', order: 'desc' });
 
     const files = [
-      createAppFileFixture({ id: 'b', name: 'b.pdf', size: 3, file: new File(['b'], 'b.pdf', { type: 'application/pdf', lastModified: 300 }) }),
-      createAppFileFixture({ id: 'a', name: 'a.pdf', size: 1, file: new File(['a'], 'a.pdf', { type: 'application/pdf', lastModified: 100 }) }),
-      createAppFileFixture({ id: 'c', name: 'c.pdf', size: 2, file: new File(['c'], 'c.pdf', { type: 'application/pdf', lastModified: 200 }) }),
+      createAppFileFixture({ id: 'file-10', name: 'file10.pdf', size: 3, file: new File(['b'], 'file10.pdf', { type: 'application/pdf', lastModified: 300 }) }),
+      createAppFileFixture({ id: 'file-1', name: 'file1.pdf', size: 1, file: new File(['a'], 'file1.pdf', { type: 'application/pdf', lastModified: 100 }) }),
+      createAppFileFixture({ id: 'file-2', name: 'file2.pdf', size: 2, file: new File(['c'], 'file2.pdf', { type: 'application/pdf', lastModified: 200 }) }),
     ];
+
+    const nameSortedFiles = sortAppFiles(files, { key: 'name', order: 'asc' });
+    assert.deepEqual(nameSortedFiles.map((file) => file.id), ['file-1', 'file-2', 'file-10']);
 
     const sortConfig: SortConfig = { key: 'size', order: 'asc' };
     const sortedFiles = sortAppFiles(files, sortConfig);
-    assert.deepEqual(sortedFiles.map((file) => file.id), ['a', 'c', 'b']);
+    assert.deepEqual(sortedFiles.map((file) => file.id), ['file-1', 'file-2', 'file-10']);
   });
 
   it('renames, duplicates, and bulk-removes files without mutating source arrays', () => {
@@ -113,6 +117,25 @@ describe('file-utils', () => {
 
     const remainingFiles = removeSelectedFiles([imageFile, duplicatedFile], new Set(['img-1']));
     assert.deepEqual(remainingFiles.map((file) => file.id), ['img-2']);
+  });
+
+  it('moves files up and down without mutating the source list', () => {
+    const files = [
+      createAppFileFixture({ id: '1', name: 'alpha.pdf' }),
+      createAppFileFixture({ id: '2', name: 'beta.pdf' }),
+      createAppFileFixture({ id: '3', name: 'gamma.pdf' }),
+    ];
+
+    const movedUp = moveAppFile(files, '2', 'up');
+    assert.deepEqual(movedUp.map((file) => file.id), ['2', '1', '3']);
+    assert.deepEqual(files.map((file) => file.id), ['1', '2', '3']);
+
+    const movedDown = moveAppFile(files, '2', 'down');
+    assert.deepEqual(movedDown.map((file) => file.id), ['1', '3', '2']);
+
+    assert.equal(moveAppFile(files, '1', 'up'), files);
+    assert.equal(moveAppFile(files, '3', 'down'), files);
+    assert.equal(moveAppFile(files, 'missing', 'down'), files);
   });
 
   it('assigns stable zip entry names for duplicates', () => {

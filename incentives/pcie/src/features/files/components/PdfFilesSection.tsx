@@ -5,6 +5,7 @@ import { formatBytes, selectFilesByIds } from '../file-utils';
 import type { AppFile, SortConfig, SortKey } from '../types';
 import { EditableFileNameCell } from './EditableFileNameCell';
 import { FileSectionHeader } from './FileSectionHeader';
+import { MoveFileButtons } from './MoveFileButtons';
 
 type CompressionLevel = 'low' | 'medium' | 'high';
 
@@ -21,6 +22,7 @@ interface PdfFilesSectionProps {
   onToggleAll: () => void;
   onToggleSelection: (id: string) => void;
   onSort: (key: SortKey) => void;
+  onMove: (id: string, direction: 'up' | 'down') => void;
   onOpenPreview: (file: AppFile) => void;
   onDuplicate: (file: AppFile) => void;
   onAskAi: (files: AppFile[]) => void;
@@ -50,6 +52,7 @@ export function PdfFilesSection({
   onToggleAll,
   onToggleSelection,
   onSort,
+  onMove,
   onOpenPreview,
   onDuplicate,
   onAskAi,
@@ -107,6 +110,13 @@ export function PdfFilesSection({
                       <GripVertical className="w-5 h-5" />
                     </div>
 
+                    <MoveFileButtons
+                      canMoveUp={index > 0}
+                      canMoveDown={index < files.length - 1}
+                      onMoveUp={() => onMove(file.id, 'up')}
+                      onMoveDown={() => onMove(file.id, 'down')}
+                    />
+
                     <input
                       type="checkbox"
                       checked={selectedIds.has(file.id)}
@@ -134,7 +144,11 @@ export function PdfFilesSection({
                         onStartRename(file);
                       }}
                     >
-                      <button onClick={(event) => { event.stopPropagation(); onDuplicate(file); }} className="text-zinc-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate">
+                      <button
+                        onClick={(event) => { event.stopPropagation(); onDuplicate(file); }}
+                        className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-white p-1.5 text-zinc-500 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                        title="Duplicate"
+                      >
                         <Copy className="w-4 h-4" />
                       </button>
                     </EditableFileNameCell>
