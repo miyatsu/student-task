@@ -69,10 +69,10 @@ npm run preview:static
 - 我们并未规定严苛的 Prettier 配置。然而由于使用了 TailwindCSS v4 的编译机制，请确保在新增 React Components 时合理使用 Utility classes 堆叠范式。对于具有逻辑复用属性的自定义钩子文件统一储存在对应的功能包下。
 
 ## 5.1 Word 转 PDF 的本地依赖说明
-- 当前高保真 Word 转 PDF 默认优先尝试 `LibreOffice CLI`。如果你希望在开发机或演示机上稳定复现这一路径，请单独安装 LibreOffice，并确保 `soffice` 可通过系统路径或默认安装目录被检测到。
-- 如果机器上没有 LibreOffice，但安装了 Microsoft Word，系统会自动退回到本地 Word COM 导出。
+- 按“转换质量第一，稳定性第二，性能第三”的用户目标，推荐默认链路应为 `Microsoft Word 原生导出 -> LibreOffice CLI -> HTML fallback`。如果你希望在开发机或演示机上复现最高保真的默认路径，请优先确保本机已安装并可调用 Microsoft Word。
+- 如果机器上没有 Microsoft Word，系统的第二选择应是 `LibreOffice CLI`；要稳定复现这一路径，请单独安装 LibreOffice，并确保 `soffice` 可通过系统路径或默认安装目录被检测到。
 - 项目不会在 `npm install` 期间自动为用户安装 Office / LibreOffice。这类桌面软件体积大、授权条件不同，也通常需要管理员或用户交互，因此只做“检测并利用”，不做自动捆绑安装。
-- `winword.exe` 没有稳定的官方 headless PDF CLI；常见 Python 库 `docx2pdf` 在 Windows/macOS 上本质仍然依赖本地 Word 自动化，因此目前没有把 Python 包单独接成第三种默认导出链路。
+- `winword.exe` 没有稳定的官方 headless PDF CLI；常见 Python 库 `docx2pdf` 在 Windows/macOS 上本质仍然依赖本地 Word 自动化，而 UNO / `unoconv` 一类方案本质仍然依赖 LibreOffice。因此这些 Python 或脚本方案被视为调用包装层，而不是新的独立默认导出链路。
 
 ## 6. 添加环境变量
 虽然前端代码绝大部分运行在客户端，但如果使用到了特定的云端功能（如 Gemini API 交互分析），则需要在项目根目录依据示例创建 `.env`文件配置后端参数。

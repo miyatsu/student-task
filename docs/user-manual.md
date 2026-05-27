@@ -15,12 +15,14 @@
 - **文档的通用操作**：每个文件名右侧会持续显示**重新命名**与**复制（克隆）**图标，避免关键操作只在悬停时才出现；同时仍可继续使用预览、删除、AI 等单项工具。
 
 ### 2. Word 文档转 PDF（含 `.doc`）
-- `DOCX` 文档在高保真模式下会优先尝试本机可用的 `LibreOffice CLI`（`soffice`），如果该链路不可用或失败，再退回本地 Microsoft Word 导出；只有前两种本地保真方式都不可用时，才会退到浏览器内的 HTML 渲染路径。
+- 从用户视角出发，本项目把 Word 转 PDF 的默认推荐策略定义为“转换质量第一，稳定性第二，性能第三”。按这个目标排序，推荐优先级应为：`本地 Microsoft Word 原生导出 -> LibreOffice CLI -> 浏览器 HTML fallback`。
+- `DOCX` 文档在高保真模式下，最理想的方式是直接调用本机 Microsoft Word 原生导出，因为它通常最接近你在 Word 里手动导出 PDF 的版式结果；如果本机没有可用 Word，第二选择是 `LibreOffice CLI`（`soffice`）；只有两种本地保真方式都不可用时，才退到浏览器内的 HTML 渲染路径。
 - 旧版 `.doc` 文档也支持转换，但这类文件会先走项目内置的本地服务端提取链路，把可读文本整理成 HTML 后再生成 PDF；不需要额外安装 Word、LibreOffice 或调用云端转换服务，因此通常能保留正文内容，但版式保真度可能不如 `DOCX`。
 - 当前 Word 转 PDF 的导出渲染会放在一个隐藏宿主层里完成，避免内容节点离屏后高度塌缩，生成空白 PDF。
 - 当你一次选择多份 Word 文档并点击 **To PDF** 后，Word 区块底部会显示与图片转换一致的绿色进度卡片，包含环形百分比、进度条、`已完成/总数` 数字、当前文件名、本次任务的已用时长，以及当前正在采用的具体方式（如 `LibreOffice CLI export`、`local Microsoft Word export` 或 `browser HTML fallback`）。
 - 转换全部完成后，进度卡会先在列表内显示 `100%` 的收尾状态，然后自动消失；界面不再弹出成功提醒对话框，以免打断连续操作。
-- 如果你希望优先使用 CLI 高保真导出，请在本机安装 LibreOffice；当前项目不会在 `npm install` 时自动捆绑安装 Office/LibreOffice。`winword.exe` 并没有稳定的官方无界面 PDF CLI，而常见 Python 库 `docx2pdf` 在 Windows/macOS 上本质也仍然依赖本地 Word，因此本项目把它们作为补充说明，而不是默认第三路径。
+- 目前可行的本地链路主要有四类：`Microsoft Word 原生导出`、`LibreOffice CLI`、`浏览器 HTML fallback`、以及 Python 封装方案（如 `docx2pdf` / UNO 封装）。其中 Python 方案本质上仍在调用 Word 或 LibreOffice，不会带来新的渲染质量，因此这里只把它视为部署包装层，而不是单独的高保真引擎。
+- 如果你希望获得最接近 Word 原生导出的结果，请优先保证本机安装并可调用 Microsoft Word；如果你更看重跨平台自动化，也可以单独安装 LibreOffice。当前项目不会在 `npm install` 时自动捆绑安装 Office / LibreOffice。
 
 ### 3. 人工智能图像增强 (AI Upscaler)
 这可能是本系统最炫酷的功能之一：当图片模糊时，悬停在图片上点击“魔棒”图标。
