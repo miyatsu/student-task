@@ -69,6 +69,8 @@ Phase 3 继续聚焦 `[src/components/HomeHero.tsx](../src/components/HomeHero.t
 
 Phase 4 回到 `[src/App.tsx](../src/App.tsx)` 中的 `workspace-upload-panel`：上传区的宽度和高度被主动收紧，虚线边框被移除，视觉骨架改成更成熟的实线描边卡片；主操作从“整卡像按钮一样可点”收束为明确的 **Choose files** 按钮，而拖拽则保留为 dropzone 行为和次级提示文案。隐藏 `input[type=file]`、`fileInputRef`、`openFilePicker()`、拖拽处理函数本身都没有变化，只是把动作入口表达得更清晰。
 
+Phase 5 主要落在 `[src/index.css](../src/index.css)` 与首屏相关组件的 class token 上：新增了一组首页用的暖中性色、边框、阴影和深蓝强调色变量，并在 `body` 上切换到本地优先的 sans 字体栈；随后 `[src/App.tsx](../src/App.tsx)` 和 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 统一改用这些 token 控制 top shell、Hero、workflow ribbon、upload panel 和主按钮的视觉语言。这样颜色、阴影和字体就不再靠零散的局部类名拼接，也不会为了首页样式额外引入外部字体请求。
+
 这里的关键约束是：只允许有一套上传逻辑。当前实现把这套逻辑完全收敛到上传面板本身，统一复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。面板本身保留 `role="button"`、键盘触发和整卡点击行为，用同一个隐藏 `input[type=file]` 同时支撑文件对话框选择与拖拽导入。
 
 最近一轮微调里，Workspace Upload 卡片回退到了更早一版的居中式视觉骨架：顶部是圆形上传图标，其下只保留 `Workspace Upload` 标签、格式胶囊以及一条最佳实践提示 `Choose files from your device, or drag and drop them here.`。原先的 `Drop files into your workspace` 大标题与长说明段被移除，格式摘要也恢复为 `PDF`、`DOC / DOCX`、`PNG`、`JPG / JPEG` 这组更贴近该版设计的写法。

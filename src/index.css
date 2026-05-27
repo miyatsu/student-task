@@ -1,2 +1,28 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+:root {
+	--home-page-bg: #f5efe7;
+	--home-shell-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 241, 235, 0.94));
+	--home-shell-border: rgba(222, 214, 203, 0.9);
+	--home-surface-bg: rgba(255, 255, 255, 0.78);
+	--home-surface-border: rgba(227, 218, 207, 0.86);
+	--home-ribbon-bg: rgba(247, 243, 237, 0.9);
+	--home-ribbon-border: rgba(225, 216, 205, 0.86);
+	--home-accent: #173d56;
+	--home-accent-hover: #0f3145;
+	--home-accent-soft: rgba(215, 231, 241, 0.95);
+	--home-shell-shadow: 0 30px 90px -50px rgba(62, 48, 33, 0.32);
+	--home-soft-shadow: 0 20px 52px -42px rgba(62, 48, 33, 0.22);
+	--home-card-shadow: 0 18px 46px -38px rgba(62, 48, 33, 0.18);
+}
+
+@layer base {
+	body {
+		background:
+			radial-gradient(circle at top, rgba(231, 218, 199, 0.34), transparent 30%),
+			var(--home-page-bg);
+		color: #18181b;
+		font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+	}
+}
