@@ -1,102 +1,86 @@
-import { Download, FileText, Files, Image as ImageIcon, Lock, ScanText, Sparkles, Wand2 } from 'lucide-react';
+import { FileArchive, FileText, Image as ImageIcon, Lock, Sparkles } from 'lucide-react';
 
-const heroHighlights = [
-  {
-    icon: Files,
-    title: 'Unified intake',
-    description: 'Drop in PDFs, images, and Word files.',
-    accentClass: 'bg-sky-50 text-sky-700 border-sky-100',
-  },
+const capabilities = [
   {
     icon: FileText,
-    title: 'Edit and convert',
-    description: 'Merge, split, compress, and convert.',
-    accentClass: 'bg-amber-50 text-amber-700 border-amber-100',
+    title: 'PDF workflow',
+    description: 'Merge, split, compress, extract pages, and export clean results.',
   },
   {
-    icon: Wand2,
-    title: 'Enhance and read',
-    description: 'Upscale images. Preview fast. Pull text.',
-    accentClass: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    icon: ImageIcon,
+    title: 'Image workflow',
+    description: 'Rotate, enhance, convert to PDF, or extract text when AI is enabled.',
   },
   {
-    icon: Download,
-    title: 'Review and export',
-    description: 'Review results, ask AI, export ZIPs.',
-    accentClass: 'bg-rose-50 text-rose-700 border-rose-100',
+    icon: FileArchive,
+    title: 'Word workflow',
+    description: 'Convert DOCX in-browser and handle legacy DOC through the local server path.',
   },
 ];
 
-const trustSignals = [
-  {
-    icon: Lock,
-    title: 'Local-first processing',
-    description: 'Editing and export stay in-browser by default.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Gemini when you choose it',
-    description: 'AI stays off until you add a key.',
-  },
-];
+interface HomeHeroProps {
+  onChooseFiles: () => void;
+}
 
-export default function HomeHero() {
+export function HomeCapabilityStrip() {
   return (
-    <header className="mb-10">
-      <div className="relative overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-[0_32px_80px_-48px_rgba(15,23,42,0.35)]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(125,211,252,0.35),transparent_34%),radial-gradient(circle_at_top_right,rgba(167,243,208,0.28),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]" />
-        <div className="absolute -top-16 right-0 h-40 w-40 rounded-full bg-amber-200/40 blur-3xl" />
-        <div className="absolute -bottom-20 left-12 h-48 w-48 rounded-full bg-sky-200/30 blur-3xl" />
-
-        <div className="relative px-6 py-8 md:px-10 md:py-10">
-          <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-            <span className="rounded-full border border-zinc-200 bg-white/80 px-3 py-1">Local-first workspace</span>
-            <span className="rounded-full border border-zinc-200 bg-white/80 px-3 py-1">PDF · Image · Word</span>
-            <span className="rounded-full border border-zinc-200 bg-white/80 px-3 py-1">AI optional</span>
-          </div>
-
-          <div className="mt-6 grid gap-8 lg:grid-cols-[1.15fr_0.95fr] lg:items-start">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-1 text-sm font-medium text-sky-700">
-                <ImageIcon className="h-4 w-4" />
-                Sort. Convert. Extract. Export.
-              </div>
-
-              <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-zinc-950 md:text-5xl md:leading-[1.05]">
-                One workspace for PDFs, images, and Word.
-              </h1>
-
-              <p className="mt-5 max-w-3xl text-base leading-8 text-zinc-600 md:text-lg">
-                Drop in mixed files. Reorder fast. Turn images and Word into PDF. Merge, compress, extract, enhance, then export.
-              </p>
-
-              <div className="mt-6 grid gap-3 md:grid-cols-2">
-                {trustSignals.map(({ icon: Icon, title, description }) => (
-                  <div key={title} className="rounded-2xl border border-zinc-200/80 bg-white/80 p-4 backdrop-blur-sm">
-                    <div className="flex items-center gap-3 text-zinc-900">
-                      <div className="rounded-xl bg-zinc-100 p-2">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <p className="text-sm font-semibold">{title}</p>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
-                  </div>
-                ))}
-              </div>
+    <section aria-labelledby="workspace-capabilities" className="mt-6">
+      <div className="grid gap-4 md:grid-cols-3">
+        {capabilities.map(({ icon: Icon, title, description }) => (
+          <article
+            key={title}
+            className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm shadow-slate-200/60"
+          >
+            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700">
+              <Icon className="h-5 w-5" />
             </div>
+            <h2 id={title === 'PDF workflow' ? 'workspace-capabilities' : undefined} className="mt-4 text-base font-semibold text-slate-950">
+              {title}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              {heroHighlights.map(({ icon: Icon, title, description, accentClass }) => (
-                <div key={title} className="rounded-2xl border border-zinc-200/80 bg-white/80 p-5 backdrop-blur-sm">
-                  <div className={`inline-flex rounded-2xl border px-3 py-2 ${accentClass}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h2 className="mt-4 text-lg font-semibold text-zinc-900">{title}</h2>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600">{description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
+  return (
+    <header className="relative overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.12),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.82))] p-6 sm:p-8 lg:p-10">
+      <div className="max-w-3xl">
+        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-3.5 py-1.5 text-sm font-medium text-slate-600 shadow-sm shadow-slate-200/50">
+          Local-first · AI optional
+        </span>
+
+        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl lg:leading-[1.05]">
+          Process PDFs, images, and Word files in one local-first workspace.
+        </h1>
+
+        <p className="mt-5 max-w-2xl text-base leading-8 text-slate-700 sm:text-lg">
+          Drop mixed files, organize them visually, convert or extract what you need, and export the result. Gemini stays off until you configure a key.
+        </p>
+
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={onChooseFiles}
+            className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
+          >
+            Choose files
+          </button>
+          <p className="text-sm text-slate-600">Supports PDF · DOCX · DOC · PNG · JPG</p>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:items-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/75 px-3 py-1.5">
+            <Lock className="h-4 w-4 text-slate-500" />
+            Local-first by default
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/75 px-3 py-1.5">
+            <Sparkles className="h-4 w-4 text-slate-500" />
+            AI only when configured
+          </span>
         </div>
       </div>
     </header>

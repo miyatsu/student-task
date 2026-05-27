@@ -58,6 +58,13 @@ export interface AppFile {
 1. 用户在多文件转换时能确认任务没有卡死，而是在逐份推进。
 2. 如果某一个源文件报错，界面可以把失败文件名和底层错误一起暴露出来，而不是只显示一个模糊的通用提示。
 
+### 2.4A 首页工作台入口整合
+首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中把它们组合成一个统一的首屏容器：左侧由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明、主 CTA 与 trust notes，右侧直接放置真实的 Workspace Upload 面板。
+
+这里的关键约束是：只允许有一套上传逻辑。为此，Hero 中的 **Choose files** 按钮和上传面板本身都复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。
+
+首屏下方追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。这样信息层级就被收敛成：产品价值 -> 真实上传入口 -> 三类能力说明。
+
 ### 2.5 旧版 `.doc` 转 PDF 路径
 `mammoth` 的能力边界本质上是 `DOCX -> HTML`，因此旧版二进制 `.doc` 不能直接复用浏览器端转换链。当前实现的策略是按格式分流：
 
