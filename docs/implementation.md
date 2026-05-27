@@ -59,13 +59,13 @@ export interface AppFile {
 2. 如果某一个源文件报错，界面可以把失败文件名和底层错误一起暴露出来，而不是只显示一个模糊的通用提示。
 
 ### 2.4A 首页工作台入口整合
-首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中把它们组合成一个统一的首屏容器：左侧由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明与 trust notes，并把 `Local-first by default` / `AI only when configured` trust pills 放到标题上方；右侧直接放置真实的 Workspace Upload 面板，并作为首页唯一的上传入口。
+首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中改成一个纵向栈式首屏：顶部由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明与 trust notes，并把 `Local-first by default` / `AI only when configured` trust pills 放到标题上方；中间是 capability strip；底部才放置真实的 Workspace Upload 面板，并作为首页唯一的上传入口。
 
 这里的关键约束是：只允许有一套上传逻辑。当前实现把这套逻辑完全收敛到右侧上传面板，统一复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。右侧卡片内部保留一个显式的 **Choose files** 按钮，但它仍然只是触发同一个隐藏 `input[type=file]`，并不会形成第二套上传实现。
 
 最近一轮微调里，Workspace Upload 卡片恢复成了“说明文案 + 明确按钮 + 格式胶囊”的旧版结构，同时把图片格式摘要从分离的 `PNG`、`JPG` 合并成单个 `PNG/JPG/JPEG` 标签，减少视觉噪声。
 
-首屏下方追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。每张卡片都把更具识别度的文件图标放在左侧，把 `PDF workflow` / `Image workflow` / `Word workflow` 标题放到图标右侧，从而把摘要阅读路径收敛成“看图标 -> 看标题 -> 看描述”。这样信息层级就被收敛成：产品价值 -> 真实上传入口 -> 三类能力说明。
+首屏中段追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。每张卡片都把更具识别度的文件图标放在左侧，把 `PDF workflow` / `Image workflow` / `Word workflow` 标题放到图标右侧，从而把摘要阅读路径收敛成“看图标 -> 看标题 -> 看描述”。当前信息层级被收敛成：产品价值 -> 三类能力说明 -> 真实上传入口。
 
 ### 2.5 旧版 `.doc` 转 PDF 路径
 `mammoth` 的能力边界本质上是 `DOCX -> HTML`，因此旧版二进制 `.doc` 不能直接复用浏览器端转换链。当前实现的策略是按格式分流：

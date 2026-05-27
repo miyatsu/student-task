@@ -1080,12 +1080,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 font-sans selection:bg-slate-200 selection:text-slate-950 pb-32">
       <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
-        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white/85 shadow-sm shadow-slate-200/70">
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="border-b border-slate-200 lg:border-b-0 lg:border-r lg:border-slate-200/80">
-              <HomeHero />
-            </div>
+        <section className="space-y-6">
+          <HomeHero />
 
+          <HomeCapabilityStrip />
+
+          <div className="rounded-[2rem] border border-slate-200 bg-white/85 shadow-sm shadow-slate-200/70">
             <div className="p-6 sm:p-8 lg:p-10">
               <div
                 id="workspace-upload-panel"
@@ -1159,9 +1159,7 @@ export default function App() {
           </div>
         </section>
 
-        <main className="space-y-8">
-          <HomeCapabilityStrip />
-
+        <main className="mt-8 space-y-8">
           {conversionError && (
             <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md">
               <p className="font-medium">Error</p>
