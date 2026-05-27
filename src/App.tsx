@@ -1085,17 +1085,17 @@ export default function App() {
 
           <HomeCapabilityStrip />
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white/85 shadow-sm shadow-slate-200/70">
-            <div className="p-6 sm:p-8 lg:p-10">
+          <div className="rounded-[2rem] bg-white/70">
+            <div className="p-2 sm:p-3 lg:p-4">
               <div
                 id="workspace-upload-panel"
                 role="button"
                 tabIndex={0}
                 aria-label="Upload files to your workspace"
-                className={`group relative flex h-full min-h-[22rem] flex-col justify-between overflow-hidden rounded-3xl border bg-white/90 p-6 text-left transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 sm:p-8
+                className={`group relative flex min-h-[16rem] flex-col justify-center overflow-hidden rounded-[2rem] border border-dashed bg-white/90 px-6 py-10 text-center transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 sm:px-8 sm:py-12
                   ${isDragging
-                    ? 'border-sky-300 bg-sky-50/60 shadow-lg shadow-sky-100/70'
-                    : 'border-slate-200 shadow-lg shadow-slate-200/50 hover:border-slate-300 hover:shadow-slate-200/80'
+                    ? 'border-sky-300 bg-sky-50/65 shadow-lg shadow-sky-100/70'
+                    : 'border-slate-300 shadow-sm shadow-slate-200/60 hover:border-slate-400 hover:shadow-slate-200/80'
                   }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -1103,7 +1103,7 @@ export default function App() {
                 onClick={openFilePicker}
                 onKeyDown={handleUploadZoneKeyDown}
               >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,rgba(125,211,252,0.18),transparent_60%)]" />
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-sky-100/70 via-emerald-50/45 to-transparent" />
                 <input
                   type="file"
                   multiple
@@ -1113,47 +1113,22 @@ export default function App() {
                   onChange={handleFileInput}
                 />
 
-                <div className="relative">
-                  <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-700 shadow-sm shadow-slate-200/50">
-                    <Upload className="h-6 w-6" />
-                  </div>
-                  <p className="mt-6 text-sm font-medium text-slate-500">Workspace upload</p>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2rem]">
-                    Drop files into your workspace
-                  </h2>
-                  <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
-                    Mixed PDFs, images, and Word documents are sorted automatically so you can process them without switching tools.
-                  </p>
+                <div className="relative mx-auto h-16 w-16 rounded-full bg-sky-100 text-sky-700 shadow-sm shadow-sky-100/80 flex items-center justify-center">
+                  <Upload className="h-8 w-8" />
                 </div>
+                <p className="relative mt-6 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Workspace Upload</p>
 
-                <div className="relative mt-8 space-y-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm text-slate-500">Drag files onto this panel or choose them directly.</p>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openFilePicker();
-                      }}
-                      className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                    >
-                      Choose files
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 text-sm text-slate-600">
-                    {['PDF', 'DOCX', 'DOC', 'PNG/JPG/JPEG'].map((item) => (
-                      <span key={item} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm shadow-slate-200/40">
+                <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-zinc-500">
+                    {['PDF', 'DOC / DOCX', 'PNG', 'JPG / JPEG'].map((item) => (
+                      <span key={item} className="rounded-full border border-zinc-200 bg-white/85 px-3 py-1.5">
                         {item}
                       </span>
                     ))}
-                  </div>
-
-                  <p className="inline-flex items-center gap-2 text-sm text-slate-500">
-                    <Upload className="h-4 w-4 text-sky-500" />
-                    Supports drag and drop with the same upload flow used by the button.
-                  </p>
                 </div>
+
+                <p className="relative mt-5 text-sm leading-7 text-zinc-500">
+                  Choose files from your device, or drag and drop them here.
+                </p>
               </div>
             </div>
           </div>

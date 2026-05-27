@@ -8,7 +8,7 @@
 
 ## 核心功能指南
 
-当前首页已经改为“工作台入口”结构：从上到下依次是产品价值说明、三张能力摘要卡片、以及实际的 Workspace Upload 面板。首页顶部直接展示 `Local-first by default` 与 `AI only when configured` 两个状态标签，Hero 主标题文案为 `PDF, Word, and Images in One Local-First Workspace`，并调整为更适合桌面端单行居中显示的字号；下方说明文字拆成两行，两句话分别单独展示，第二句为 `LLM stays off until you configure a key.`，同时第一句末尾的 `and export the result.` 会保持为连续短语，不再单独掉到下一行；Hero 中不再单独显示文件格式支持说明。当前首页只保留最下方上传面板这一个上传入口；面板里提供明确的 **Choose files** 按钮，同时继续支持拖拽上传。上传面板中的格式摘要已合并为 `PNG/JPG/JPEG`，而中间的三张能力卡片则采用“图标在左、标题在右”的摘要样式，标题分别为 `PDF Workflow`、`Image Workflow`、`Word Workflow`，方便快速扫读三条工作流。
+当前首页已经改为“工作台入口”结构：从上到下依次是产品价值说明、三张能力摘要卡片、以及实际的 Workspace Upload 面板。首页顶部直接展示 `Local-first by default` 与 `AI only when configured` 两个状态标签，Hero 主标题文案为 `PDF, Word, and Images in One Local-First Workspace`，并调整为更适合桌面端单行居中显示的字号；下方说明文字拆成两行，两句话分别单独展示，第二句为 `LLM stays off until you configure a key.`，同时第一句末尾的 `and export the result.` 会保持为连续短语，不再单独掉到下一行；Hero 中不再单独显示文件格式支持说明。当前首页只保留最下方上传面板这一个上传入口；上传卡片已回退到更简洁的居中样式，保留上传图标、`Workspace Upload` 标签和格式胶囊，去掉中间的大标题与长说明，并直接提示你既可以通过文件对话框选择，也可以把文件拖拽到卡片中。格式胶囊当前显示为 `PDF`、`DOC / DOCX`、`PNG`、`JPG / JPEG`；而中间的三张能力卡片则采用“图标在左、标题在右”的摘要样式，标题分别为 `PDF Workflow`、`Image Workflow`、`Word Workflow`，方便快速扫读三条工作流。
 
 ### 1. 文件的导入、分类与操作
 - **导入文件**：直接拖拽各类文件到虚线框内，或点击上传。系统会自动把文件归档到“图片”、“PDF”或者“Word”栏目中。

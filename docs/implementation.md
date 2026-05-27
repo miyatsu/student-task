@@ -61,9 +61,9 @@ export interface AppFile {
 ### 2.4A 首页工作台入口整合
 首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中改成一个纵向栈式首屏：顶部由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明与 trust notes，并把 `Local-first by default` / `AI only when configured` trust pills 放到标题上方，同时使用 `PDF, Word, and Images in One Local-First Workspace` 作为主标题；为了避免桌面宽度下右侧拥挤，标题字号被适度收紧并改为单行居中呈现。其下的 supporting copy 被拆成两个独立段落，其中第二句更新为 `LLM stays off until you configure a key.`，同时第一句结尾的 `and export the result.` 被包裹为 `nowrap` 片段，避免在窄桌面宽度下单独折到下一行；中间是 capability strip；底部才放置真实的 Workspace Upload 面板，并作为首页唯一的上传入口。
 
-这里的关键约束是：只允许有一套上传逻辑。当前实现把这套逻辑完全收敛到右侧上传面板，统一复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。右侧卡片内部保留一个显式的 **Choose files** 按钮，但它仍然只是触发同一个隐藏 `input[type=file]`，并不会形成第二套上传实现。
+这里的关键约束是：只允许有一套上传逻辑。当前实现把这套逻辑完全收敛到上传面板本身，统一复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。面板本身保留 `role="button"`、键盘触发和整卡点击行为，用同一个隐藏 `input[type=file]` 同时支撑文件对话框选择与拖拽导入。
 
-最近一轮微调里，Workspace Upload 卡片恢复成了“说明文案 + 明确按钮 + 格式胶囊”的旧版结构，同时把图片格式摘要从分离的 `PNG`、`JPG` 合并成单个 `PNG/JPG/JPEG` 标签，减少视觉噪声。
+最近一轮微调里，Workspace Upload 卡片回退到了更早一版的居中式视觉骨架：顶部是圆形上传图标，其下只保留 `Workspace Upload` 标签、格式胶囊以及一条最佳实践提示 `Choose files from your device, or drag and drop them here.`。原先的 `Drop files into your workspace` 大标题与长说明段被移除，格式摘要也恢复为 `PDF`、`DOC / DOCX`、`PNG`、`JPG / JPEG` 这组更贴近该版设计的写法。
 
 首屏中段追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。每张卡片都把更具识别度的文件图标放在左侧，把 `PDF Workflow` / `Image Workflow` / `Word Workflow` 标题放到图标右侧，从而把摘要阅读路径收敛成“看图标 -> 看标题 -> 看描述”。当前信息层级被收敛成：产品价值 -> 三类能力说明 -> 真实上传入口。
 
