@@ -158,6 +158,23 @@ describe('WordFilesSection', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Now converting archive.doc');
   });
 
+  it('shows a completed finalizing state at 100 percent', () => {
+    const props = createProps({
+      isConverting: true,
+      conversionProgress: {
+        completed: 5,
+        total: 5,
+        currentFileName: null,
+      },
+    });
+
+    render(<WordFilesSection {...props} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('5/5');
+    expect(screen.getByRole('status')).toHaveTextContent('Finalizing converted files');
+    expect(screen.getByRole('status')).toHaveTextContent('100%');
+  });
+
   it('saves inline rename edits with the current file id', async () => {
     const user = userEvent.setup();
     const props = createProps({

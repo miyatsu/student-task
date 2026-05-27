@@ -52,6 +52,8 @@ export interface AppFile {
 ### 2.4 图片 / Word 转 PDF 进度反馈
 图片和 Word 的批量转 PDF 都仍然在 `[src/App.tsx](../src/App.tsx)` 中顺序执行，但现在额外维护了局部进度状态：已完成数量、总数量、当前正在处理的文件名，以及转换开始时间。`ImageFilesSection` 与 `WordFilesSection` 通过共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)` 渲染同一套绿色进度卡片，同时提供环形百分比、横向进度条、`x/y` 数字反馈；其中 Word 转 PDF 会基于开始时间持续显示已用时长，帮助用户估计剩余时间。
 
+在完成态上，Word 转 PDF 不再依赖浏览器 `alert()` 提示成功。`convertSelectedWords()` 会先把进度显式推进到 `100%` / `currentFileName = null` 的收尾状态，让卡片展示 “Finalizing converted files”，然后再自动清除这张卡片。这样可以避免阻塞式弹窗抢在 React 最后一帧渲染前弹出，导致用户看到“实际已完成但圆环仍停在 80%”的错觉。
+
 这样做有两个直接收益：
 1. 用户在多文件转换时能确认任务没有卡死，而是在逐份推进。
 2. 如果某一个源文件报错，界面可以把失败文件名和底层错误一起暴露出来，而不是只显示一个模糊的通用提示。

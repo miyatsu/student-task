@@ -467,6 +467,7 @@ export default function App() {
     if (selected.length === 0) return;
 
     const startedAt = Date.now();
+    let completedSuccessfully = false;
 
     setIsConverting(true);
     setWordConversionProgress({
@@ -477,8 +478,6 @@ export default function App() {
     });
     try {
       const newPdfs: AppFile[] = [];
-      let nativeConversionCount = 0;
-      let fallbackConversionCount = 0;
 
       for (const [index, word] of selected.entries()) {
         setWordConversionProgress({
@@ -489,12 +488,6 @@ export default function App() {
         });
 
         const conversionResult = await convertWordFileToPdfBlob(word);
-
-        if (conversionResult.mode === 'native') {
-          nativeConversionCount += 1;
-        } else {
-          fallbackConversionCount += 1;
-        }
 
         const baseName = word.name.replace(/\.[^/.]+$/, "");
         const newName = `${baseName}.pdf`;
@@ -515,22 +508,31 @@ export default function App() {
           startedAt,
         });
       }
+
+      setWordConversionProgress({
+        completed: selected.length,
+        total: selected.length,
+        currentFileName: null,
+        startedAt,
+      });
       
       setPdfFiles(prev => [...prev, ...newPdfs]);
       setSelectedPdfIds(prev => new Set([...prev, ...newPdfs.map(f => f.id)]));
-
-      if (nativeConversionCount === newPdfs.length) {
-        alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF using local native export!`);
-      } else if (nativeConversionCount > 0) {
-        alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF. Native export handled ${nativeConversionCount}; fallback handled ${fallbackConversionCount}.`);
-      } else {
-        alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF using the local fallback renderer.`);
-      }
+      completedSuccessfully = true;
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 400);
+      });
     } catch (error) {
       console.error(error);
       const activeFileName = wordConversionProgress?.currentFileName ?? selected[0]?.name ?? 'selected Word document';
       alert(buildWordToPdfErrorMessage(activeFileName, error));
     } finally {
+      if (!completedSuccessfully) {
+        setWordConversionProgress(null);
+        setIsConverting(false);
+        return;
+      }
+
       setWordConversionProgress(null);
       setIsConverting(false);
     }
