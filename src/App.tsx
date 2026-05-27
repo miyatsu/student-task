@@ -37,6 +37,36 @@ import * as mammoth from 'mammoth';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
+type NativeWordPdfBackend = 'libreoffice-cli' | 'word-com';
+type WordConversionMethod = NativeWordPdfBackend | 'html-fallback';
+
+const WORD_CONVERSION_METHOD_LABELS: Record<WordConversionMethod, string> = {
+  'libreoffice-cli': 'Method: LibreOffice CLI export',
+  'word-com': 'Method: local Microsoft Word export',
+  'html-fallback': 'Method: browser HTML fallback',
+};
+
+const buildWordConversionMethodLabel = (method: WordConversionMethod) => WORD_CONVERSION_METHOD_LABELS[method];
+
+const isNativeWordPdfBackend = (value: string | null): value is NativeWordPdfBackend => (
+  value === 'libreoffice-cli' || value === 'word-com'
+);
+
+const buildNextWordConversionMethodLabel = (
+  cliUnavailable: boolean,
+  wordUnavailable: boolean,
+) => {
+  if (!cliUnavailable) {
+    return buildWordConversionMethodLabel('libreoffice-cli');
+  }
+
+  if (!wordUnavailable) {
+    return buildWordConversionMethodLabel('word-com');
+  }
+
+  return buildWordConversionMethodLabel('html-fallback');
+};
+
 export default function App() {
   const [pdfFiles, setPdfFiles] = useState<AppFile[]>([]);
   const [imageFiles, setImageFiles] = useState<AppFile[]>([]);
@@ -72,8 +102,10 @@ export default function App() {
     total: number;
     currentFileName: string | null;
     startedAt?: number;
+    detailLabel?: string | null;
   } | null>(null);
-  const nativeWordPdfBackendUnavailableRef = useRef(false);
+  const libreOfficeWordPdfBackendUnavailableRef = useRef(false);
+  const wordComPdfBackendUnavailableRef = useRef(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -339,6 +371,16 @@ export default function App() {
     return `Failed to convert "${fileName}" to PDF: ${String(error)}`;
   };
 
+  const updateWordConversionProgress = (progress: {
+    completed: number;
+    total: number;
+    currentFileName: string | null;
+    startedAt: number;
+    detailLabel?: string | null;
+  }) => {
+    setWordConversionProgress(progress);
+  };
+
   const extractLegacyWordHtml = async (file: File) => {
     const formData = new FormData();
     formData.append('word', file);
@@ -376,20 +418,20 @@ export default function App() {
     return html;
   };
 
-  const convertWordFileToNativePdf = async (file: File) => {
+  const convertWordFileToNativePdf = async (file: File, preferredBackend: NativeWordPdfBackend) => {
     const formData = new FormData();
     formData.append('word', file);
 
-    const response = await fetch('/api/word/convert-pdf', {
+    const response = await fetch(`/api/word/convert-pdf?backend=${preferredBackend}`, {
       method: 'POST',
       body: formData,
     });
 
     if (response.ok) {
-      nativeWordPdfBackendUnavailableRef.current = false;
+      const backendHeader = response.headers.get('X-Word-Pdf-Backend');
       return {
         blob: await response.blob(),
-        backend: response.headers.get('X-Word-Pdf-Backend'),
+        backend: isNativeWordPdfBackend(backendHeader) ? backendHeader : preferredBackend,
       };
     }
 
@@ -400,13 +442,15 @@ export default function App() {
       payload = null;
     }
 
-    if (payload?.code === 'native-backend-unavailable') {
-      nativeWordPdfBackendUnavailableRef.current = true;
-    }
-
-    throw new Error(
-      payload?.error
-      || `Server returned ${response.status} while exporting the Word file through the local native backend.`,
+    throw Object.assign(
+      new Error(
+        payload?.error
+        || `Server returned ${response.status} while exporting the Word file through the local native backend.`,
+      ),
+      {
+        code: payload?.code,
+        preferredBackend,
+      },
     );
   };
 
@@ -428,34 +472,60 @@ export default function App() {
     }
   };
 
-  const convertWordFileToPdfBlob = async (word: AppFile) => {
-    let nativeError: Error | null = null;
+  const convertWordFileToPdfBlob = async (
+    word: AppFile,
+    onMethodChange: (methodLabel: string) => void,
+  ) => {
+    const nativeErrors: Error[] = [];
+    const nativeBackendsToTry: NativeWordPdfBackend[] = [];
 
-    if (!nativeWordPdfBackendUnavailableRef.current) {
+    if (!libreOfficeWordPdfBackendUnavailableRef.current) {
+      nativeBackendsToTry.push('libreoffice-cli');
+    }
+
+    if (!wordComPdfBackendUnavailableRef.current) {
+      nativeBackendsToTry.push('word-com');
+    }
+
+    for (const backend of nativeBackendsToTry) {
+      onMethodChange(buildWordConversionMethodLabel(backend));
+
       try {
-        const nativeResult = await convertWordFileToNativePdf(word.file);
+        const nativeResult = await convertWordFileToNativePdf(word.file, backend);
         return {
           blob: nativeResult.blob,
           mode: 'native' as const,
           backend: nativeResult.backend,
         };
       } catch (error) {
-        nativeError = error instanceof Error ? error : new Error(String(error));
+        const nativeError = error instanceof Error ? error : new Error(String(error));
+        const errorCode = 'code' in nativeError ? nativeError.code : undefined;
+
+        if (backend === 'libreoffice-cli' && errorCode === 'native-backend-unavailable') {
+          libreOfficeWordPdfBackendUnavailableRef.current = true;
+        }
+
+        if (backend === 'word-com' && errorCode === 'native-backend-unavailable') {
+          wordComPdfBackendUnavailableRef.current = true;
+        }
+
+        nativeErrors.push(nativeError);
       }
     }
 
     try {
+      onMethodChange(buildWordConversionMethodLabel('html-fallback'));
       const html = await convertWordFileToHtml(word);
       const blob = await renderWordHtmlToPdfBlob(html);
       return {
         blob,
         mode: 'fallback' as const,
-        backend: null,
+        backend: 'html-fallback' as const,
       };
     } catch (fallbackError) {
-      if (nativeError) {
+      if (nativeErrors.length > 0) {
         const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-        throw new Error(`${nativeError.message} Fallback rendering also failed: ${fallbackMessage}`);
+        throw new Error(`${nativeErrors.map((error) => error.message).join(' ')} Fallback rendering also failed: ${fallbackMessage}`);
       }
 
       throw fallbackError;
@@ -468,26 +538,46 @@ export default function App() {
 
     const startedAt = Date.now();
     let completedSuccessfully = false;
+    let lastMethodLabel = buildNextWordConversionMethodLabel(
+      libreOfficeWordPdfBackendUnavailableRef.current,
+      wordComPdfBackendUnavailableRef.current,
+    );
 
     setIsConverting(true);
-    setWordConversionProgress({
+    updateWordConversionProgress({
       completed: 0,
       total: selected.length,
       currentFileName: selected[0]?.name ?? null,
       startedAt,
+      detailLabel: lastMethodLabel,
     });
     try {
       const newPdfs: AppFile[] = [];
 
       for (const [index, word] of selected.entries()) {
-        setWordConversionProgress({
+        lastMethodLabel = buildNextWordConversionMethodLabel(
+          libreOfficeWordPdfBackendUnavailableRef.current,
+          wordComPdfBackendUnavailableRef.current,
+        );
+
+        updateWordConversionProgress({
           completed: index,
           total: selected.length,
           currentFileName: word.name,
           startedAt,
+          detailLabel: lastMethodLabel,
         });
 
-        const conversionResult = await convertWordFileToPdfBlob(word);
+        const conversionResult = await convertWordFileToPdfBlob(word, (detailLabel) => {
+          lastMethodLabel = detailLabel;
+          updateWordConversionProgress({
+            completed: index,
+            total: selected.length,
+            currentFileName: word.name,
+            startedAt,
+            detailLabel,
+          });
+        });
 
         const baseName = word.name.replace(/\.[^/.]+$/, "");
         const newName = `${baseName}.pdf`;
@@ -501,19 +591,25 @@ export default function App() {
           type: 'pdf'
         });
 
-        setWordConversionProgress({
+        lastMethodLabel = conversionResult.mode === 'native'
+          ? buildWordConversionMethodLabel(conversionResult.backend)
+          : buildWordConversionMethodLabel('html-fallback');
+
+        updateWordConversionProgress({
           completed: index + 1,
           total: selected.length,
           currentFileName: selected[index + 1]?.name ?? null,
           startedAt,
+          detailLabel: lastMethodLabel,
         });
       }
 
-      setWordConversionProgress({
+      updateWordConversionProgress({
         completed: selected.length,
         total: selected.length,
         currentFileName: null,
         startedAt,
+        detailLabel: lastMethodLabel,
       });
       
       setPdfFiles(prev => [...prev, ...newPdfs]);

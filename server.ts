@@ -19,6 +19,7 @@ import { extractLegacyWordHtml } from "./src/server/word-conversion.ts";
 import {
   buildNativeWordPdfUnavailableMessage,
   convertWordDocumentToPdf,
+  isNativeWordPdfBackend,
   NativeWordPdfUnavailableError,
 } from "./src/server/word-pdf-native.ts";
 
@@ -78,6 +79,18 @@ async function startServer() {
       return res.status(400).json({ error: "No Word file uploaded" });
     }
 
+    const requestedBackendQuery = typeof req.query.backend === 'string'
+      ? req.query.backend
+      : undefined;
+
+    if (requestedBackendQuery && !isNativeWordPdfBackend(requestedBackendQuery)) {
+      return res.status(400).json({ error: 'Unsupported native Word PDF backend requested.' });
+    }
+
+    const requestedBackend = requestedBackendQuery && isNativeWordPdfBackend(requestedBackendQuery)
+      ? requestedBackendQuery
+      : undefined;
+
     const originalExtension = path.extname(req.file.originalname) || '.docx';
     const inputPath = path.join(uploadDir, `${req.file.filename}${originalExtension}`);
     const outputPath = path.join(uploadDir, `${req.file.filename}.pdf`);
@@ -85,7 +98,9 @@ async function startServer() {
     try {
       fs.renameSync(req.file.path, inputPath);
 
-      const backend = await convertWordDocumentToPdf(inputPath, outputPath);
+      const backend = await convertWordDocumentToPdf(inputPath, outputPath, {
+        preferredBackend: requestedBackend,
+      });
       const pdfBuffer = fs.readFileSync(outputPath);
 
       res.setHeader("Cache-Control", "no-store");

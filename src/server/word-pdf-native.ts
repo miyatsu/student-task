@@ -5,7 +5,9 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
-export type NativeWordPdfBackend = 'word-com' | 'libreoffice';
+export const NATIVE_WORD_PDF_BACKENDS = ['libreoffice-cli', 'word-com'] as const;
+
+export type NativeWordPdfBackend = (typeof NATIVE_WORD_PDF_BACKENDS)[number];
 
 export interface ResolvedNativeWordPdfBackend {
   kind: NativeWordPdfBackend;
@@ -28,10 +30,16 @@ interface ResolveNativeWordPdfBackendDependencies {
 }
 
 interface ConvertWordDocumentToPdfDependencies extends ResolveNativeWordPdfBackendDependencies {
-  resolveNativeBackend?: () => Promise<ResolvedNativeWordPdfBackend | null>;
+  preferredBackend?: NativeWordPdfBackend;
+  resolveNativeBackend?: (preferredBackend?: NativeWordPdfBackend) => Promise<ResolvedNativeWordPdfBackend | null>;
   runWordComExport?: (inputPath: string, outputPath: string) => Promise<void>;
   runLibreOfficeExport?: (executablePath: string, inputPath: string, outputPath: string) => Promise<void>;
   pathExists?: (targetPath: string) => boolean;
+}
+
+export function isNativeWordPdfBackend(value: unknown): value is NativeWordPdfBackend {
+  return typeof value === 'string'
+    && (NATIVE_WORD_PDF_BACKENDS as readonly string[]).includes(value);
 }
 
 export function buildNativeWordPdfUnavailableMessage() {
@@ -39,7 +47,7 @@ export function buildNativeWordPdfUnavailableMessage() {
 }
 
 export function formatNativeWordPdfBackendLabel(backend: NativeWordPdfBackend) {
-  return backend === 'word-com' ? 'local Microsoft Word' : 'local LibreOffice';
+  return backend === 'word-com' ? 'local Microsoft Word' : 'LibreOffice CLI';
 }
 
 export function getPossibleLibreOfficeExecutables(environment: NodeJS.ProcessEnv = process.env) {
@@ -64,25 +72,32 @@ export function resolveExistingExecutablePath(
 }
 
 export async function resolveNativeWordPdfBackend(
+  preferredBackend?: NativeWordPdfBackend,
   dependencies: ResolveNativeWordPdfBackendDependencies = {},
 ): Promise<ResolvedNativeWordPdfBackend | null> {
   const platform = dependencies.platform ?? process.platform;
   const checkWordComAvailability = dependencies.checkWordComAvailability ?? defaultCheckWordComAvailability;
   const findLibreOfficeExecutable = dependencies.findLibreOfficeExecutable ?? defaultFindLibreOfficeExecutable;
 
-  if (platform === 'win32' && await checkWordComAvailability()) {
-    return { kind: 'word-com' };
-  }
+  const availableBackends: ResolvedNativeWordPdfBackend[] = [];
 
   const executablePath = await findLibreOfficeExecutable();
   if (executablePath) {
-    return {
-      kind: 'libreoffice',
+    availableBackends.push({
+      kind: 'libreoffice-cli',
       executablePath,
-    };
+    });
   }
 
-  return null;
+  if (platform === 'win32' && await checkWordComAvailability()) {
+    availableBackends.push({ kind: 'word-com' });
+  }
+
+  if (preferredBackend) {
+    return availableBackends.find((backend) => backend.kind === preferredBackend) ?? null;
+  }
+
+  return availableBackends[0] ?? null;
 }
 
 export async function convertWordDocumentToPdf(
@@ -91,12 +106,12 @@ export async function convertWordDocumentToPdf(
   dependencies: ConvertWordDocumentToPdfDependencies = {},
 ): Promise<NativeWordPdfBackend> {
   const resolveNativeBackend = dependencies.resolveNativeBackend
-    ?? (() => resolveNativeWordPdfBackend(dependencies));
+    ?? ((preferredBackend) => resolveNativeWordPdfBackend(preferredBackend, dependencies));
   const runWordComExport = dependencies.runWordComExport ?? defaultRunWordComExport;
   const runLibreOfficeExport = dependencies.runLibreOfficeExport ?? defaultRunLibreOfficeExport;
   const pathExists = dependencies.pathExists ?? ((targetPath: string) => fs.existsSync(targetPath));
 
-  const backend = await resolveNativeBackend();
+  const backend = await resolveNativeBackend(dependencies.preferredBackend);
   if (!backend) {
     throw new NativeWordPdfUnavailableError();
   }

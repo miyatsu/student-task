@@ -148,6 +148,7 @@ describe('WordFilesSection', () => {
         completed: 2,
         total: 5,
         currentFileName: 'archive.doc',
+        detailLabel: 'Method: browser HTML fallback',
       },
     });
 
@@ -156,6 +157,7 @@ describe('WordFilesSection', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Converting Word documents to PDF');
     expect(screen.getByRole('status')).toHaveTextContent('2/5');
     expect(screen.getByRole('status')).toHaveTextContent('Now converting archive.doc');
+    expect(screen.getByRole('status')).toHaveTextContent('Method: browser HTML fallback');
   });
 
   it('shows a completed finalizing state at 100 percent', () => {

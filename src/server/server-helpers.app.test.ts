@@ -108,8 +108,31 @@ describe('word conversion helpers', () => {
 });
 
 describe('native word pdf helpers', () => {
-  it('prefers Microsoft Word COM on Windows when it is available', async () => {
-    const backend = await resolveNativeWordPdfBackend({
+  it('prefers the LibreOffice CLI backend when it is available', async () => {
+    const backend = await resolveNativeWordPdfBackend(undefined, {
+      platform: 'win32',
+      checkWordComAvailability: async () => true,
+      findLibreOfficeExecutable: async () => 'C:/LibreOffice/program/soffice.exe',
+    });
+
+    expect(backend).toEqual({
+      kind: 'libreoffice-cli',
+      executablePath: 'C:/LibreOffice/program/soffice.exe',
+    });
+  });
+
+  it('falls back to Microsoft Word COM when LibreOffice CLI is unavailable', async () => {
+    const backend = await resolveNativeWordPdfBackend(undefined, {
+      platform: 'win32',
+      checkWordComAvailability: async () => true,
+      findLibreOfficeExecutable: async () => null,
+    });
+
+    expect(backend).toEqual({ kind: 'word-com' });
+  });
+
+  it('can resolve a specifically requested backend', async () => {
+    const backend = await resolveNativeWordPdfBackend('word-com', {
       platform: 'win32',
       checkWordComAvailability: async () => true,
       findLibreOfficeExecutable: async () => 'C:/LibreOffice/program/soffice.exe',
@@ -118,21 +141,8 @@ describe('native word pdf helpers', () => {
     expect(backend).toEqual({ kind: 'word-com' });
   });
 
-  it('falls back to LibreOffice when Word COM is unavailable', async () => {
-    const backend = await resolveNativeWordPdfBackend({
-      platform: 'win32',
-      checkWordComAvailability: async () => false,
-      findLibreOfficeExecutable: async () => 'C:/LibreOffice/program/soffice.exe',
-    });
-
-    expect(backend).toEqual({
-      kind: 'libreoffice',
-      executablePath: 'C:/LibreOffice/program/soffice.exe',
-    });
-  });
-
   it('reports no native backend when neither Word nor LibreOffice is available', async () => {
-    const backend = await resolveNativeWordPdfBackend({
+    const backend = await resolveNativeWordPdfBackend(undefined, {
       platform: 'win32',
       checkWordComAvailability: async () => false,
       findLibreOfficeExecutable: async () => null,
@@ -155,6 +165,7 @@ describe('native word pdf helpers', () => {
     const runWordComExport = vi.fn().mockResolvedValue(undefined);
 
     const backend = await convertWordDocumentToPdf('input.docx', 'output.pdf', {
+      preferredBackend: 'word-com',
       resolveNativeBackend: async () => ({ kind: 'word-com' }),
       runWordComExport,
       pathExists: (targetPath) => targetPath === 'output.pdf',
@@ -166,6 +177,7 @@ describe('native word pdf helpers', () => {
 
   it('throws a dedicated unavailable error when no native backend exists', async () => {
     await expect(convertWordDocumentToPdf('input.docx', 'output.pdf', {
+      preferredBackend: 'libreoffice-cli',
       resolveNativeBackend: async () => null,
     })).rejects.toBeInstanceOf(NativeWordPdfUnavailableError);
   });

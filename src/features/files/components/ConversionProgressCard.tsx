@@ -5,6 +5,7 @@ export interface ConversionProgressValue {
   total: number;
   currentFileName: string | null;
   startedAt?: number;
+  detailLabel?: string | null;
 }
 
 interface ConversionProgressCardProps {
@@ -71,6 +72,11 @@ export function ConversionProgressCard({
         <p className="truncate text-xs text-emerald-700">
           {progress.currentFileName ? `${currentLabel} ${progress.currentFileName}` : finalizingLabel}
         </p>
+        {progress.detailLabel && (
+          <p className="truncate pt-1 text-xs font-medium text-emerald-800">
+            {progress.detailLabel}
+          </p>
+        )}
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100">
           <div
             className="h-full rounded-full bg-emerald-500 transition-all duration-300"

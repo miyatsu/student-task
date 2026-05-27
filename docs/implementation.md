@@ -77,6 +77,17 @@ export interface AppFile {
 
 这样既保持了本地渲染，也避免把布局信息在克隆阶段破坏掉。
 
+### 2.6 CLI 优先的高保真 Word 转 PDF 链路
+最近一轮实现把高保真 Word 转 PDF 明确拆成了三种可观察的方式，并按顺序尝试：
+
+1. `LibreOffice CLI`：服务端在 `[src/server/word-pdf-native.ts](../src/server/word-pdf-native.ts)` 中检测 `soffice` 可执行文件，优先用 `--headless --convert-to pdf` 做本地 CLI 导出。
+2. `local Microsoft Word`：如果 CLI 不可用，或显式指定 CLI 时返回“backend unavailable”，前端会退回到 PowerShell + Word COM 的本地导出脚本 `[scripts/convert-word-to-pdf.ps1](../scripts/convert-word-to-pdf.ps1)`。
+3. `browser HTML fallback`：如果两种本地保真方式都不可用，才回到浏览器侧 `mammoth / word-extractor + html2pdf.js` 的兜底链路。
+
+之所以把 CLI 作为默认首选，而不是继续优先 Word COM，是因为 `soffice` 更接近真正的命令行批处理模型，安装后更适合连续批量转换；同时它可以在没有 Word 授权和 COM 环境的机器上工作。另一方面，`winword.exe` 并没有稳定、官方支持的无界面 PDF CLI；常见 Python 包如 `docx2pdf` 也只是对本地 Word 自动化做了一层封装，因此这里没有把它们抽成独立的第三种默认实现。
+
+为了让用户在等待过程中知道当前到底走的是哪条路径，`[src/App.tsx](../src/App.tsx)` 里的 `convertWordFileToPdfBlob()` 不再把所有原生导出都打包成一个黑盒请求，而是按 `LibreOffice CLI -> Word COM -> HTML` 的顺序逐次尝试，并把“当前方法”写入共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)`。这样进度卡不仅显示百分比和已用时长，还能直接暴露当前采用的转换方式。
+
 <a id="ai-image-enhancement"></a>
 ## 3. UI无缝结合的 AI 本地放大器算法
 针对图片分辨率或者质感提升，在早期曾经考量使用纯 `Canvas 2d + Worker` 进行传统的像素过滤掩码计算法。但为了真实地生成原先不存在的高频纹理，目前使用了 `@tensorflow/tfjs` 与 `upscaler`（基于深度学习的前端推测库）。
