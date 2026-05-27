@@ -1,14 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useRef, useCallback } from 'react';
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { Download, Loader2, Upload } from 'lucide-react';
-import { PDFDocument, PDFRawStream, PDFName } from 'pdf-lib';
-import JSZip from 'jszip';
-import PdfEditor from './components/PdfEditor';
-import AiAssistant from './components/AiAssistant';
-import ImageEnhanceModal from './components/ImageEnhanceModal';
-import FilePreview from './components/FilePreview';
 import HomeHero, { HomeCapabilityStrip } from './components/HomeHero';
-import imageCompression from 'browser-image-compression';
 import {
   AppFile,
   buildImageToPdfErrorMessage,
@@ -31,11 +24,18 @@ import {
   toggleSelection,
 } from './features/files';
 import { ImageFilesSection, PdfFilesSection, WordFilesSection } from './features/files/components';
-import { createGeminiClient, geminiSetupGuideText } from './lib/gemini';
 
-import * as mammoth from 'mammoth';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
+const PdfEditor = lazy(() => import('./components/PdfEditor'));
+const AiAssistant = lazy(() => import('./components/AiAssistant'));
+const ImageEnhanceModal = lazy(() => import('./components/ImageEnhanceModal'));
+const FilePreview = lazy(() => import('./components/FilePreview'));
+
+const loadPdfLib = () => import('pdf-lib');
+const loadJsZip = async () => (await import('jszip')).default;
+const loadImageCompression = async () => (await import('browser-image-compression')).default;
+const loadMammoth = () => import('mammoth');
+const loadHtml2Pdf = async () => (await import('html2pdf.js')).default;
+const loadGeminiHelpers = () => import('./lib/gemini');
 
 type NativeWordPdfBackend = 'libreoffice-cli' | 'word-com';
 type WordConversionMethod = NativeWordPdfBackend | 'html-fallback';
@@ -66,6 +66,17 @@ const buildNextWordConversionMethodLabel = (
 
   return buildWordConversionMethodLabel('html-fallback');
 };
+
+function ModalLoadingFallback() {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="inline-flex items-center gap-3 rounded-full bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-lg">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading workspace tool...
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [pdfFiles, setPdfFiles] = useState<AppFile[]>([]);
@@ -418,6 +429,7 @@ export default function App() {
     }
 
     const arrayBuffer = await word.file.arrayBuffer();
+    const mammoth = await loadMammoth();
     const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
     return html;
   };
@@ -462,6 +474,7 @@ export default function App() {
     const renderHost = createWordPdfRenderHost(html);
 
     try {
+      const html2pdf = await loadHtml2Pdf();
       const opt: any = {
         margin: 10,
         filename: 'temp.pdf',
@@ -650,6 +663,7 @@ export default function App() {
       currentFileName: selectedImgs[0]?.name ?? null,
     });
     try {
+      const { PDFDocument } = await loadPdfLib();
       const newPdfs: AppFile[] = [];
       
       for (const [index, img] of selectedImgs.entries()) {
@@ -712,6 +726,7 @@ export default function App() {
 
     setIsCompressing(true);
     try {
+      const imageCompression = await loadImageCompression();
       const newImages: AppFile[] = [];
       const timestamp = Date.now();
 
@@ -824,6 +839,7 @@ export default function App() {
 
     setIsMerging(true);
     try {
+      const { PDFDocument } = await loadPdfLib();
       const mergedPdf = await PDFDocument.create();
 
       for (const pdfFile of selectedPdfs) {
@@ -879,6 +895,7 @@ export default function App() {
 
     setIsDownloading(true);
     try {
+      const JSZip = await loadJsZip();
       const zip = new JSZip();
 
       resolveZipEntryNames(allSelected).forEach(({ file, name }) => {
@@ -905,6 +922,7 @@ export default function App() {
   const handleExtractText = async (appFile: AppFile) => {
     setExtractingTextId(appFile.id);
     try {
+      const { createGeminiClient, geminiSetupGuideText } = await loadGeminiHelpers();
       const ai = await createGeminiClient();
       if (!ai) {
         alert(geminiSetupGuideText);
@@ -1016,6 +1034,7 @@ export default function App() {
   const handleExtractImages = async (appFile: AppFile) => {
     setExtractingImagesId(appFile.id);
     try {
+      const { PDFDocument, PDFRawStream, PDFName } = await loadPdfLib();
       const arrayBuffer = await appFile.file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
       const extractedFiles: File[] = [];
@@ -1265,50 +1284,60 @@ export default function App() {
 
       {/* PDF Editor Modal */}
       {editingPagesPdfId && (
-        <PdfEditor
-          file={pdfFiles.find(f => f.id === editingPagesPdfId)!}
-          onClose={() => setEditingPagesPdfId(null)}
-          onUpdate={(id, newFile) => {
-            setPdfFiles(prev => prev.map(f => f.id === id ? { ...f, file: newFile, size: newFile.size } : f));
-          }}
-          onExtract={(newFile) => {
-            const newAppFile: AppFile = {
-              id: Math.random().toString(36).substring(7),
-              file: newFile,
-              name: newFile.name,
-              size: newFile.size,
-              type: 'pdf'
-            };
-            setPdfFiles(prev => [...prev, newAppFile]);
-            setSelectedPdfIds(prev => new Set([...prev, newAppFile.id]));
-          }}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <PdfEditor
+            file={pdfFiles.find(f => f.id === editingPagesPdfId)!}
+            onClose={() => setEditingPagesPdfId(null)}
+            onUpdate={(id, newFile) => {
+              setPdfFiles(prev => prev.map(f => f.id === id ? { ...f, file: newFile, size: newFile.size } : f));
+            }}
+            onExtract={(newFile) => {
+              const newAppFile: AppFile = {
+                id: Math.random().toString(36).substring(7),
+                file: newFile,
+                name: newFile.name,
+                size: newFile.size,
+                type: 'pdf'
+              };
+              setPdfFiles(prev => [...prev, newAppFile]);
+              setSelectedPdfIds(prev => new Set([...prev, newAppFile.id]));
+            }}
+          />
+        </Suspense>
       )}
 
       {/* AI Assistant Modal */}
       {aiAssistantFiles && (
-        <AiAssistant
-          files={aiAssistantFiles}
-          onClose={() => setAiAssistantFiles(null)}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <AiAssistant
+            files={aiAssistantFiles}
+            onClose={() => setAiAssistantFiles(null)}
+          />
+        </Suspense>
       )}
 
       {/* Image Enhance Modal */}
       {enhanceFile && (
-        <ImageEnhanceModal
-          file={enhanceFile}
-          onClose={() => setEnhanceFile(null)}
-          onSave={(newFile) => {
-            setImageFiles(prev => [...prev, newFile]);
-          }}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <ImageEnhanceModal
+            file={enhanceFile}
+            onClose={() => setEnhanceFile(null)}
+            onSave={(newFile) => {
+              setImageFiles(prev => [...prev, newFile]);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* File Preview Modal */}
-      <FilePreview
-        file={previewFile}
-        onClose={() => setPreviewFile(null)}
-      />
+      {previewFile && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <FilePreview
+            file={previewFile}
+            onClose={() => setPreviewFile(null)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
