@@ -48,7 +48,7 @@ const capabilities = [
 
 export function HomeCapabilityStrip() {
   return (
-    <section aria-label="Workspace capabilities" className="mt-6">
+    <section aria-label="Workspace capabilities">
       <div className="grid gap-4 md:grid-cols-3">
         {capabilities.map(({ icon: Icon, title, description }) => (
           <article

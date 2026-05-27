@@ -1078,15 +1078,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950 font-sans selection:bg-slate-200 selection:text-slate-950 pb-32">
-      <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
-        <section className="space-y-6">
+    <div className="min-h-screen bg-zinc-50 text-slate-950 font-sans selection:bg-slate-200 selection:text-slate-950 pb-32">
+      <div className="mx-auto max-w-6xl px-6 py-12 lg:px-8 lg:py-16">
+        <section className="space-y-4 rounded-[2.75rem] border border-zinc-200/80 bg-[radial-gradient(circle_at_top,rgba(191,219,254,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(244,244,245,0.92))] p-3 shadow-[0_28px_90px_-48px_rgba(24,24,27,0.35)] sm:p-4 lg:p-5">
           <HomeHero />
 
-          <HomeCapabilityStrip />
+          <div className="rounded-[2.15rem] border border-zinc-200/75 bg-white/78 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_18px_44px_-38px_rgba(24,24,27,0.28)] sm:p-5 lg:p-6">
+            <HomeCapabilityStrip />
 
-          <div className="rounded-[2rem] bg-white/70">
-            <div className="p-2 sm:p-3 lg:p-4">
+            <div className="mt-4 sm:mt-5">
               <div
                 id="workspace-upload-panel"
                 role="button"
@@ -1134,7 +1134,7 @@ export default function App() {
           </div>
         </section>
 
-        <main className="mt-8 space-y-8">
+        <main className="mt-10 space-y-8">
           {conversionError && (
             <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md">
               <p className="font-medium">Error</p>
