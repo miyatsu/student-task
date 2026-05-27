@@ -47,6 +47,10 @@ npm run build
 ```
 这一步会将所有的 React 组件、本地的 tfjs 流水线以及 CSS 打包到根目录下的 `dist/` 文件夹中。同时因为通过 esbuild 将相关 node runtime（`server.ts`）捆绑为能够利用的执行文件，随后可通过 `npm run start` 确认与线上等同的运行效果。
 
+当前前端构建还包含一层针对大依赖的收束策略：`PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 这些不属于首页首屏的工具入口会被 `React.lazy()` 拆成独立 chunk；`pdf-lib`、`jszip`、`mammoth`、`browser-image-compression`、Gemini helper 和部分浏览器端 fallback 依赖则会在运行时通过 `import()` 拉起。与此同时，Vite 会把 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`@tensorflow/*`、`upscaler` 等重依赖继续拆成单独的 vendor chunk，避免它们重新回流到首页主包。
+
+由于这些 chunk 大多只在 PDF 编辑、AI 增强、OCR / AI 对话或浏览器端 Word fallback 时才会下载，`vite.config.ts` 里的 `chunkSizeWarningLimit` 被调整为 `900`。如果未来 `npm run build` 再次出现 chunk 告警，优先判断它是否落在首页主入口；如果只是某个惰性工具块单独膨胀，再决定是继续拆包还是接受该功能的按需体积。
+
 如果你想在本地预览“带后端 API 的生产态”，请在构建完成后执行：
 
 ```bash
@@ -66,7 +70,14 @@ npm run preview:static
 - 请运行 `npm test` 以验证已抽离的纯逻辑模块没有发生行为回归。
 - 请运行 `npm run lint` 以检查可能的 TypeScript 类型语法错误以及未捕捉的反模式调用。
 - 如果本轮修改影响了前端运行逻辑或共享模块，请额外运行 `npm run build` 做一次打包验证。
+- 如果本轮修改触及 PDF 编辑、AI 增强、OCR / AI 对话、Word HTML fallback 等重功能入口，请在 `npm run build` 后手动打开这些入口确认惰性 chunk 也能被正常加载，而不仅仅是首页能够打开。
 - 我们并未规定严苛的 Prettier 配置。然而由于使用了 TailwindCSS v4 的编译机制，请确保在新增 React Components 时合理使用 Utility classes 堆叠范式。对于具有逻辑复用属性的自定义钩子文件统一储存在对应的功能包下。
+
+## 5.1 Word 转 PDF 的本地依赖说明
+- 按“转换质量第一，稳定性第二，性能第三”的用户目标，当前默认链路为 `Microsoft Word 原生导出 -> LibreOffice CLI -> HTML fallback`。如果你希望在开发机或演示机上复现最高保真的默认路径，请优先确保本机已安装并可调用 Microsoft Word。
+- 如果机器上没有 Microsoft Word，系统的第二选择应是 `LibreOffice CLI`；要稳定复现这一路径，请单独安装 LibreOffice，并确保 `soffice` 可通过系统路径或默认安装目录被检测到。
+- 项目不会在 `npm install` 期间自动为用户安装 Office / LibreOffice。这类桌面软件体积大、授权条件不同，也通常需要管理员或用户交互，因此只做“检测并利用”，不做自动捆绑安装。
+- `winword.exe` 没有稳定的官方 headless PDF CLI；常见 Python 库 `docx2pdf` 在 Windows/macOS 上本质仍然依赖本地 Word 自动化，而 UNO / `unoconv` 一类方案本质仍然依赖 LibreOffice。因此这些 Python 或脚本方案被视为调用包装层，而不是新的独立默认导出链路。
 
 ## 6. 添加环境变量
 虽然前端代码绝大部分运行在客户端，但如果使用到了特定的云端功能（如 Gemini API 交互分析），则需要在项目根目录依据示例创建 `.env`文件配置后端参数。

@@ -1,14 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useRef, useCallback } from 'react';
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { Download, Loader2, Upload } from 'lucide-react';
-import { PDFDocument, PDFRawStream, PDFName } from 'pdf-lib';
-import JSZip from 'jszip';
-import PdfEditor from './components/PdfEditor';
-import AiAssistant from './components/AiAssistant';
-import ImageEnhanceModal from './components/ImageEnhanceModal';
-import FilePreview from './components/FilePreview';
-import HomeHero from './components/HomeHero';
-import imageCompression from 'browser-image-compression';
+import HomeHero, { HomeCapabilityStrip } from './components/HomeHero';
 import {
   AppFile,
   buildImageToPdfErrorMessage,
@@ -31,11 +24,59 @@ import {
   toggleSelection,
 } from './features/files';
 import { ImageFilesSection, PdfFilesSection, WordFilesSection } from './features/files/components';
-import { createGeminiClient, geminiSetupGuideText } from './lib/gemini';
 
-import * as mammoth from 'mammoth';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
+const PdfEditor = lazy(() => import('./components/PdfEditor'));
+const AiAssistant = lazy(() => import('./components/AiAssistant'));
+const ImageEnhanceModal = lazy(() => import('./components/ImageEnhanceModal'));
+const FilePreview = lazy(() => import('./components/FilePreview'));
+
+const loadPdfLib = () => import('pdf-lib');
+const loadJsZip = async () => (await import('jszip')).default;
+const loadImageCompression = async () => (await import('browser-image-compression')).default;
+const loadMammoth = () => import('mammoth');
+const loadHtml2Pdf = async () => (await import('html2pdf.js')).default;
+const loadGeminiHelpers = () => import('./lib/gemini');
+
+type NativeWordPdfBackend = 'libreoffice-cli' | 'word-com';
+type WordConversionMethod = NativeWordPdfBackend | 'html-fallback';
+
+const WORD_CONVERSION_METHOD_LABELS: Record<WordConversionMethod, string> = {
+  'libreoffice-cli': 'Method: LibreOffice CLI export',
+  'word-com': 'Method: local Microsoft Word export',
+  'html-fallback': 'Method: browser HTML fallback',
+};
+
+const buildWordConversionMethodLabel = (method: WordConversionMethod) => WORD_CONVERSION_METHOD_LABELS[method];
+
+const isNativeWordPdfBackend = (value: string | null): value is NativeWordPdfBackend => (
+  value === 'libreoffice-cli' || value === 'word-com'
+);
+
+const buildNextWordConversionMethodLabel = (
+  wordUnavailable: boolean,
+  cliUnavailable: boolean,
+) => {
+  if (!wordUnavailable) {
+    return buildWordConversionMethodLabel('word-com');
+  }
+
+  if (!cliUnavailable) {
+    return buildWordConversionMethodLabel('libreoffice-cli');
+  }
+
+  return buildWordConversionMethodLabel('html-fallback');
+};
+
+function ModalLoadingFallback() {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="inline-flex items-center gap-3 rounded-full bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-lg">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading workspace tool...
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [pdfFiles, setPdfFiles] = useState<AppFile[]>([]);
@@ -71,9 +112,17 @@ export default function App() {
     completed: number;
     total: number;
     currentFileName: string | null;
+    startedAt?: number;
+    detailLabel?: string | null;
   } | null>(null);
+  const libreOfficeWordPdfBackendUnavailableRef = useRef(false);
+  const wordComPdfBackendUnavailableRef = useRef(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const openFilePicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -337,6 +386,16 @@ export default function App() {
     return `Failed to convert "${fileName}" to PDF: ${String(error)}`;
   };
 
+  const updateWordConversionProgress = (progress: {
+    completed: number;
+    total: number;
+    currentFileName: string | null;
+    startedAt: number;
+    detailLabel?: string | null;
+  }) => {
+    setWordConversionProgress(progress);
+  };
+
   const extractLegacyWordHtml = async (file: File) => {
     const formData = new FormData();
     formData.append('word', file);
@@ -370,72 +429,223 @@ export default function App() {
     }
 
     const arrayBuffer = await word.file.arrayBuffer();
+    const mammoth = await loadMammoth();
     const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
     return html;
+  };
+
+  const convertWordFileToNativePdf = async (file: File, preferredBackend: NativeWordPdfBackend) => {
+    const formData = new FormData();
+    formData.append('word', file);
+
+    const response = await fetch(`/api/word/convert-pdf?backend=${preferredBackend}`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (response.ok) {
+      const backendHeader = response.headers.get('X-Word-Pdf-Backend');
+      return {
+        blob: await response.blob(),
+        backend: isNativeWordPdfBackend(backendHeader) ? backendHeader : preferredBackend,
+      };
+    }
+
+    let payload: { error?: string; code?: string } | null = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    throw Object.assign(
+      new Error(
+        payload?.error
+        || `Server returned ${response.status} while exporting the Word file through the local native backend.`,
+      ),
+      {
+        code: payload?.code,
+        preferredBackend,
+      },
+    );
+  };
+
+  const renderWordHtmlToPdfBlob = async (html: string) => {
+    const renderHost = createWordPdfRenderHost(html);
+
+    try {
+      const html2pdf = await loadHtml2Pdf();
+      const opt: any = {
+        margin: 10,
+        filename: 'temp.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      return await html2pdf().set(opt).from(renderHost.source).output('blob');
+    } finally {
+      renderHost.dispose();
+    }
+  };
+
+  const convertWordFileToPdfBlob = async (
+    word: AppFile,
+    onMethodChange: (methodLabel: string) => void,
+  ) => {
+    const nativeErrors: Error[] = [];
+    const nativeBackendsToTry: NativeWordPdfBackend[] = [];
+
+    if (!wordComPdfBackendUnavailableRef.current) {
+      nativeBackendsToTry.push('word-com');
+    }
+
+    if (!libreOfficeWordPdfBackendUnavailableRef.current) {
+      nativeBackendsToTry.push('libreoffice-cli');
+    }
+
+    for (const backend of nativeBackendsToTry) {
+      onMethodChange(buildWordConversionMethodLabel(backend));
+
+      try {
+        const nativeResult = await convertWordFileToNativePdf(word.file, backend);
+        return {
+          blob: nativeResult.blob,
+          mode: 'native' as const,
+          backend: nativeResult.backend,
+        };
+      } catch (error) {
+        const nativeError = error instanceof Error ? error : new Error(String(error));
+        const errorCode = 'code' in nativeError ? nativeError.code : undefined;
+
+        if (backend === 'libreoffice-cli' && errorCode === 'native-backend-unavailable') {
+          libreOfficeWordPdfBackendUnavailableRef.current = true;
+        }
+
+        if (backend === 'word-com' && errorCode === 'native-backend-unavailable') {
+          wordComPdfBackendUnavailableRef.current = true;
+        }
+
+        nativeErrors.push(nativeError);
+      }
+    }
+
+    try {
+      onMethodChange(buildWordConversionMethodLabel('html-fallback'));
+      const html = await convertWordFileToHtml(word);
+      const blob = await renderWordHtmlToPdfBlob(html);
+      return {
+        blob,
+        mode: 'fallback' as const,
+        backend: 'html-fallback' as const,
+      };
+    } catch (fallbackError) {
+      if (nativeErrors.length > 0) {
+        const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        throw new Error(`${nativeErrors.map((error) => error.message).join(' ')} Fallback rendering also failed: ${fallbackMessage}`);
+      }
+
+      throw fallbackError;
+    }
   };
 
   const convertSelectedWords = async () => {
     const selected = selectFilesByIds(wordFiles, selectedWordIds);
     if (selected.length === 0) return;
 
+    const startedAt = Date.now();
+    let completedSuccessfully = false;
+    let lastMethodLabel = buildNextWordConversionMethodLabel(
+      wordComPdfBackendUnavailableRef.current,
+      libreOfficeWordPdfBackendUnavailableRef.current,
+    );
+
     setIsConverting(true);
-    setWordConversionProgress({
+    updateWordConversionProgress({
       completed: 0,
       total: selected.length,
       currentFileName: selected[0]?.name ?? null,
+      startedAt,
+      detailLabel: lastMethodLabel,
     });
     try {
       const newPdfs: AppFile[] = [];
+
       for (const [index, word] of selected.entries()) {
-        setWordConversionProgress({
+        lastMethodLabel = buildNextWordConversionMethodLabel(
+          wordComPdfBackendUnavailableRef.current,
+          libreOfficeWordPdfBackendUnavailableRef.current,
+        );
+
+        updateWordConversionProgress({
           completed: index,
           total: selected.length,
           currentFileName: word.name,
+          startedAt,
+          detailLabel: lastMethodLabel,
         });
 
-        const html = await convertWordFileToHtml(word);
-        const renderHost = createWordPdfRenderHost(html);
-        
-        try {
-          const opt: any = {
-            margin: 10,
-            filename: 'temp.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          };
-          const pdfBlob = await html2pdf().set(opt).from(renderHost.source).output('blob');
-          
-          const baseName = word.name.replace(/\.[^/.]+$/, "");
-          const newName = `${baseName}.pdf`;
-          const newFile = new File([pdfBlob], newName, { type: 'application/pdf' });
-          
-          newPdfs.push({
-            id: Math.random().toString(36).substring(7),
-            file: newFile,
-            name: newName,
-            size: newFile.size,
-            type: 'pdf'
-          });
-
-          setWordConversionProgress({
-            completed: index + 1,
+        const conversionResult = await convertWordFileToPdfBlob(word, (detailLabel) => {
+          lastMethodLabel = detailLabel;
+          updateWordConversionProgress({
+            completed: index,
             total: selected.length,
-            currentFileName: selected[index + 1]?.name ?? null,
+            currentFileName: word.name,
+            startedAt,
+            detailLabel,
           });
-        } finally {
-          renderHost.dispose();
-        }
+        });
+
+        const baseName = word.name.replace(/\.[^/.]+$/, "");
+        const newName = `${baseName}.pdf`;
+        const newFile = new File([conversionResult.blob], newName, { type: 'application/pdf' });
+
+        newPdfs.push({
+          id: Math.random().toString(36).substring(7),
+          file: newFile,
+          name: newName,
+          size: newFile.size,
+          type: 'pdf'
+        });
+
+        lastMethodLabel = conversionResult.mode === 'native'
+          ? buildWordConversionMethodLabel(conversionResult.backend)
+          : buildWordConversionMethodLabel('html-fallback');
+
+        updateWordConversionProgress({
+          completed: index + 1,
+          total: selected.length,
+          currentFileName: selected[index + 1]?.name ?? null,
+          startedAt,
+          detailLabel: lastMethodLabel,
+        });
       }
+
+      updateWordConversionProgress({
+        completed: selected.length,
+        total: selected.length,
+        currentFileName: null,
+        startedAt,
+        detailLabel: lastMethodLabel,
+      });
       
       setPdfFiles(prev => [...prev, ...newPdfs]);
       setSelectedPdfIds(prev => new Set([...prev, ...newPdfs.map(f => f.id)]));
-      alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF!`);
+      completedSuccessfully = true;
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 400);
+      });
     } catch (error) {
       console.error(error);
       const activeFileName = wordConversionProgress?.currentFileName ?? selected[0]?.name ?? 'selected Word document';
       alert(buildWordToPdfErrorMessage(activeFileName, error));
     } finally {
+      if (!completedSuccessfully) {
+        setWordConversionProgress(null);
+        setIsConverting(false);
+        return;
+      }
+
       setWordConversionProgress(null);
       setIsConverting(false);
     }
@@ -453,6 +663,7 @@ export default function App() {
       currentFileName: selectedImgs[0]?.name ?? null,
     });
     try {
+      const { PDFDocument } = await loadPdfLib();
       const newPdfs: AppFile[] = [];
       
       for (const [index, img] of selectedImgs.entries()) {
@@ -515,6 +726,7 @@ export default function App() {
 
     setIsCompressing(true);
     try {
+      const imageCompression = await loadImageCompression();
       const newImages: AppFile[] = [];
       const timestamp = Date.now();
 
@@ -627,6 +839,7 @@ export default function App() {
 
     setIsMerging(true);
     try {
+      const { PDFDocument } = await loadPdfLib();
       const mergedPdf = await PDFDocument.create();
 
       for (const pdfFile of selectedPdfs) {
@@ -682,6 +895,7 @@ export default function App() {
 
     setIsDownloading(true);
     try {
+      const JSZip = await loadJsZip();
       const zip = new JSZip();
 
       resolveZipEntryNames(allSelected).forEach(({ file, name }) => {
@@ -708,6 +922,7 @@ export default function App() {
   const handleExtractText = async (appFile: AppFile) => {
     setExtractingTextId(appFile.id);
     try {
+      const { createGeminiClient, geminiSetupGuideText } = await loadGeminiHelpers();
       const ai = await createGeminiClient();
       if (!ai) {
         alert(geminiSetupGuideText);
@@ -819,6 +1034,7 @@ export default function App() {
   const handleExtractImages = async (appFile: AppFile) => {
     setExtractingImagesId(appFile.id);
     try {
+      const { PDFDocument, PDFRawStream, PDFName } = await loadPdfLib();
       const arrayBuffer = await appFile.file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
       const extractedFiles: File[] = [];
@@ -872,55 +1088,71 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 pb-32">
-      <div className="max-w-5xl mx-auto px-4 py-10 md:py-12">
-        <HomeHero />
+    <div className="min-h-screen bg-[var(--home-page-bg)] text-slate-950 font-sans selection:bg-stone-200 selection:text-slate-950 pb-32">
+      <div className="mx-auto max-w-6xl px-6 py-12 lg:px-8 lg:py-16">
+        <section className="space-y-4 rounded-[2.75rem] border border-[color:var(--home-shell-border)] bg-[var(--home-shell-bg)] p-3 shadow-[var(--home-shell-shadow)] sm:p-4 lg:p-5">
+          <HomeHero onChooseFiles={openFilePicker} />
 
-        <main className="space-y-8">
+          <div className="rounded-[2.15rem] border border-[color:var(--home-surface-border)] bg-[var(--home-surface-bg)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),var(--home-soft-shadow)] sm:p-5 lg:p-6">
+            <HomeCapabilityStrip />
+
+            <div className="mt-4 sm:mt-5">
+              <div
+                id="workspace-upload-panel"
+                className={`group relative mx-auto flex min-h-[12.5rem] max-w-[42rem] flex-col justify-center overflow-hidden rounded-[1.85rem] border bg-[radial-gradient(circle_at_top,rgba(223,235,243,0.7),rgba(255,255,255,0.96)_45%,rgba(249,245,240,0.94))] px-6 py-8 text-center transition-all duration-200 ease-in-out sm:px-8 sm:py-9
+                  ${isDragging
+                    ? 'border-sky-300 shadow-[0_20px_60px_-36px_rgba(14,165,233,0.35)]'
+                    : 'border-[color:var(--home-surface-border)] shadow-[var(--home-card-shadow)] hover:border-zinc-300 hover:shadow-[var(--home-soft-shadow)]'
+                  }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/70 via-white/35 to-transparent" />
+                <input
+                  type="file"
+                  multiple
+                  accept="application/pdf,image/png,image/jpeg,image/jpg,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleFileInput}
+                />
+
+                <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--home-accent-soft)] text-[var(--home-accent)] shadow-sm shadow-white/80">
+                  <Upload className="h-7 w-7" />
+                </div>
+                <p className="relative mt-6 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Workspace Upload</p>
+
+                <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-zinc-500">
+                    {['PDF', 'DOC / DOCX', 'PNG', 'JPG / JPEG'].map((item) => (
+                      <span key={item} className="rounded-full border border-zinc-200 bg-white/85 px-3 py-1.5">
+                        {item}
+                      </span>
+                    ))}
+                </div>
+
+                <div className="relative mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={openFilePicker}
+                    className="inline-flex items-center justify-center rounded-full bg-[var(--home-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--home-card-shadow)] transition-colors hover:bg-[var(--home-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--home-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  >
+                    Choose files
+                  </button>
+                  <p className="text-sm text-zinc-500">or drag and drop files here</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <main className="mt-10 space-y-8">
           {conversionError && (
             <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md">
               <p className="font-medium">Error</p>
               <p className="text-sm">{conversionError}</p>
             </div>
           )}
-
-          {/* Upload Zone */}
-          <div
-            className={`relative overflow-hidden border-2 border-dashed rounded-[1.75rem] p-10 text-center transition-all duration-200 ease-in-out cursor-pointer
-              ${isDragging 
-                ? 'border-sky-500 bg-sky-50 scale-[1.02]' 
-                : 'border-zinc-300 bg-white hover:border-sky-400 hover:bg-zinc-50'
-              }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-sky-100/70 via-emerald-50/45 to-transparent" />
-            <input
-              type="file"
-              multiple
-              accept="application/pdf,image/png,image/jpeg,image/jpg,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="hidden"
-              ref={fileInputRef}
-              onChange={handleFileInput}
-            />
-            <div className="relative mx-auto w-16 h-16 mb-4 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 shadow-sm">
-              <Upload className="w-8 h-8" />
-            </div>
-            <p className="relative text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Workspace Upload</p>
-            <h3 className="relative mt-3 text-2xl font-semibold text-zinc-900">Drop PDFs, images, or Word documents</h3>
-            <p className="relative mt-3 mx-auto max-w-2xl text-zinc-500 leading-7">
-              Mixed uploads are sorted automatically, so you can convert, edit, enhance, extract, analyze, and export from one place.
-            </p>
-            <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-zinc-500">
-              {['PDF', 'DOC / DOCX', 'PNG', 'JPG / JPEG'].map((item) => (
-                <span key={item} className="rounded-full border border-zinc-200 bg-white/85 px-3 py-1.5">
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
 
           <DragDropContext onDragEnd={onDragEnd}>
             
@@ -1052,50 +1284,60 @@ export default function App() {
 
       {/* PDF Editor Modal */}
       {editingPagesPdfId && (
-        <PdfEditor
-          file={pdfFiles.find(f => f.id === editingPagesPdfId)!}
-          onClose={() => setEditingPagesPdfId(null)}
-          onUpdate={(id, newFile) => {
-            setPdfFiles(prev => prev.map(f => f.id === id ? { ...f, file: newFile, size: newFile.size } : f));
-          }}
-          onExtract={(newFile) => {
-            const newAppFile: AppFile = {
-              id: Math.random().toString(36).substring(7),
-              file: newFile,
-              name: newFile.name,
-              size: newFile.size,
-              type: 'pdf'
-            };
-            setPdfFiles(prev => [...prev, newAppFile]);
-            setSelectedPdfIds(prev => new Set([...prev, newAppFile.id]));
-          }}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <PdfEditor
+            file={pdfFiles.find(f => f.id === editingPagesPdfId)!}
+            onClose={() => setEditingPagesPdfId(null)}
+            onUpdate={(id, newFile) => {
+              setPdfFiles(prev => prev.map(f => f.id === id ? { ...f, file: newFile, size: newFile.size } : f));
+            }}
+            onExtract={(newFile) => {
+              const newAppFile: AppFile = {
+                id: Math.random().toString(36).substring(7),
+                file: newFile,
+                name: newFile.name,
+                size: newFile.size,
+                type: 'pdf'
+              };
+              setPdfFiles(prev => [...prev, newAppFile]);
+              setSelectedPdfIds(prev => new Set([...prev, newAppFile.id]));
+            }}
+          />
+        </Suspense>
       )}
 
       {/* AI Assistant Modal */}
       {aiAssistantFiles && (
-        <AiAssistant
-          files={aiAssistantFiles}
-          onClose={() => setAiAssistantFiles(null)}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <AiAssistant
+            files={aiAssistantFiles}
+            onClose={() => setAiAssistantFiles(null)}
+          />
+        </Suspense>
       )}
 
       {/* Image Enhance Modal */}
       {enhanceFile && (
-        <ImageEnhanceModal
-          file={enhanceFile}
-          onClose={() => setEnhanceFile(null)}
-          onSave={(newFile) => {
-            setImageFiles(prev => [...prev, newFile]);
-          }}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <ImageEnhanceModal
+            file={enhanceFile}
+            onClose={() => setEnhanceFile(null)}
+            onSave={(newFile) => {
+              setImageFiles(prev => [...prev, newFile]);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* File Preview Modal */}
-      <FilePreview
-        file={previewFile}
-        onClose={() => setPreviewFile(null)}
-      />
+      {previewFile && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <FilePreview
+            file={previewFile}
+            onClose={() => setPreviewFile(null)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

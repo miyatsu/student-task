@@ -50,30 +50,77 @@ export interface AppFile {
 这让 `App.tsx` 主要保留状态编排和 UI 交互流程，而把可单测的无副作用逻辑下沉到独立模块。
 
 ### 2.4 图片 / Word 转 PDF 进度反馈
-图片和 Word 的批量转 PDF 都仍然在 `[src/App.tsx](../src/App.tsx)` 中顺序执行，但现在额外维护了局部进度状态：已完成数量、总数量，以及当前正在处理的文件名。`ImageFilesSection` 与 `WordFilesSection` 通过共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)` 渲染同一套绿色进度卡片，同时提供环形百分比、横向进度条和 `x/y` 数字反馈。
+图片和 Word 的批量转 PDF 都仍然在 `[src/App.tsx](../src/App.tsx)` 中顺序执行，但现在额外维护了局部进度状态：已完成数量、总数量、当前正在处理的文件名，以及转换开始时间。`ImageFilesSection` 与 `WordFilesSection` 通过共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)` 渲染同一套绿色进度卡片，同时提供环形百分比、横向进度条、`x/y` 数字反馈；其中 Word 转 PDF 会基于开始时间持续显示已用时长，帮助用户估计剩余时间。
+
+在完成态上，Word 转 PDF 不再依赖浏览器 `alert()` 提示成功。`convertSelectedWords()` 会先把进度显式推进到 `100%` / `currentFileName = null` 的收尾状态，让卡片展示 “Finalizing converted files”，然后再自动清除这张卡片。这样可以避免阻塞式弹窗抢在 React 最后一帧渲染前弹出，导致用户看到“实际已完成但圆环仍停在 80%”的错觉。
 
 这样做有两个直接收益：
 1. 用户在多文件转换时能确认任务没有卡死，而是在逐份推进。
 2. 如果某一个源文件报错，界面可以把失败文件名和底层错误一起暴露出来，而不是只显示一个模糊的通用提示。
+
+### 2.4A 首页工作台入口整合
+首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中改成一个纵向栈式首屏：顶部由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明与 trust notes，并把 `Local-first by default` / `AI only when configured` trust pills 放到标题上方，同时使用 `PDF, Word, and Images in One Local-First Workspace` 作为主标题；为了避免桌面宽度下右侧拥挤，标题字号被适度收紧并改为单行居中呈现。其下的 supporting copy 被拆成两个独立段落，其中第二句更新为 `LLM stays off until you configure a key.`，同时第一句结尾的 `and export the result.` 被包裹为 `nowrap` 片段，避免在窄桌面宽度下单独折到下一行；中间是 capability strip；底部才放置真实的 Workspace Upload 面板，并作为首页唯一的上传入口。
+
+Phase 1 的结构性调整主要发生在 `[src/App.tsx](../src/App.tsx)`：Hero、Workflow strip、Upload panel 被统一包进一个共享首屏外壳，后两者进一步被收进同一个内层 surface，并通过更紧的垂直节奏和统一边框/背景减少“多块平级卡片”的割裂感。对应地，`[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 里的 `HomeCapabilityStrip` 去掉了原有的外部顶边距，改由首屏组合容器统一控制模块间节奏。
+
+Phase 2 的重点回到 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)`：trust pills 改为居中排列，supporting copy 也与主标题共享中心轴；同时重新引入 Hero 级主 CTA，并通过 `HomeHeroProps.onChooseFiles` 直接复用 `[src/App.tsx](../src/App.tsx)` 中现有的 `openFilePicker()`。这样 Hero 本身就承担了“阅读后立刻开始”的第一行动点，但没有新增第二套上传实现。
+
+Phase 3 继续聚焦 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 中的 `HomeCapabilityStrip`：原先三张相互分离的说明卡被替换成一个共享外壳的 workflow ribbon，内部仅保留三列分区与轻量分隔线；同时 `Image` 图标不再使用独立的 lucide 线性图标，而是与 PDF / Word 一起统一到 `DocumentGlyph` 这一套文件徽章语言，减少图标风格混杂带来的割裂感。
+
+Phase 4 回到 `[src/App.tsx](../src/App.tsx)` 中的 `workspace-upload-panel`：上传区的宽度和高度被主动收紧，虚线边框被移除，视觉骨架改成更成熟的实线描边卡片；主操作从“整卡像按钮一样可点”收束为明确的 **Choose files** 按钮，而拖拽则保留为 dropzone 行为和次级提示文案。隐藏 `input[type=file]`、`fileInputRef`、`openFilePicker()`、拖拽处理函数本身都没有变化，只是把动作入口表达得更清晰。
+
+Phase 5 主要落在 `[src/index.css](../src/index.css)` 与首屏相关组件的 class token 上：新增了一组首页用的暖中性色、边框、阴影和深蓝强调色变量，并在 `body` 上切换到本地优先的 sans 字体栈；随后 `[src/App.tsx](../src/App.tsx)` 和 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 统一改用这些 token 控制 top shell、Hero、workflow ribbon、upload panel 和主按钮的视觉语言。这样颜色、阴影和字体就不再靠零散的局部类名拼接，也不会为了首页样式额外引入外部字体请求。
+
+最近又追加了一轮前端打包收束，目标是处理 Vite 在生产构建阶段对超大 chunk 的提示。根因并不是首页 UI 本身，而是 `[src/App.tsx](../src/App.tsx)` 顶层同步导入了 `pdf-lib`、`jszip`、`mammoth`、`browser-image-compression`、Gemini helper，以及几个会继续拉起 `pdfjs-dist` / `tfjs` 的 modal 组件，导致用户即使只是打开首页，也会把后续工具链一起打进主包。
+
+当前方案分两层处理：
+1. 组件层面，把 `PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 改成 `React.lazy()`，只在对应弹层真的打开时再加载。
+2. 依赖层面，把 `pdf-lib`、`jszip`、`mammoth`、`browser-image-compression`、Gemini helper 等运行时依赖改成 `import()`；同时在 `[vite.config.ts](../vite.config.ts)` 里用 `manualChunks` 把 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`@tensorflow/*`、`upscaler` 等重包拆到各自的 vendor chunk。
+
+这样调整之后，首页主入口已经从原先会触发告警的大体积单包，收敛成 300~400k 级别的首屏 chunk；剩余较大的部分主要集中在本地 AI 增强和 Word/PDF 浏览器 fallback 这些本来就按需触发的惰性能力上。因此 `build.chunkSizeWarningLimit` 也被同步调整到 `900`，避免构建阶段继续把这些非首屏、非自动加载的功能块误报成首页风险。
+
+这里的关键约束是：只允许有一套上传逻辑。当前实现把这套逻辑完全收敛到上传面板本身，统一复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。面板本身保留 `role="button"`、键盘触发和整卡点击行为，用同一个隐藏 `input[type=file]` 同时支撑文件对话框选择与拖拽导入。
+
+最近一轮微调里，Workspace Upload 卡片回退到了更早一版的居中式视觉骨架：顶部是圆形上传图标，其下只保留 `Workspace Upload` 标签、格式胶囊以及一条最佳实践提示 `Choose files from your device, or drag and drop them here.`。原先的 `Drop files into your workspace` 大标题与长说明段被移除，格式摘要也恢复为 `PDF`、`DOC / DOCX`、`PNG`、`JPG / JPEG` 这组更贴近该版设计的写法。
+
+首屏中段追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。每张卡片都把更具识别度的文件图标放在左侧，把 `PDF Workflow` / `Image Workflow` / `Word Workflow` 标题放到图标右侧，从而把摘要阅读路径收敛成“看图标 -> 看标题 -> 看描述”。当前信息层级被收敛成：产品价值 -> 三类能力说明 -> 真实上传入口。
 
 ### 2.5 旧版 `.doc` 转 PDF 路径
 `mammoth` 的能力边界本质上是 `DOCX -> HTML`，因此旧版二进制 `.doc` 不能直接复用浏览器端转换链。当前实现的策略是按格式分流：
 
 1. `.docx`：继续在浏览器中调用 `mammoth.convertToHtml()`，最大化保留语义化结构。
 2. `.doc`：通过 `[server.ts](../server.ts)` 上传到 `/api/word/extract-html`，由 `[src/server/word-conversion.ts](../src/server/word-conversion.ts)` 调用 `word-extractor` 提取正文、页眉页脚、脚注、批注和文本框中的可读文本。
-3. 服务端把这些文本做 HTML 转义并包装成段落 / 分节结构，再回传给前端，最终仍由现有的 `html2pdf.js` 流程生成 PDF。
+3. 服务端把这些文本做 HTML 转义并包装成段落 / 分节结构，再回传给前端，最终仍由浏览器端的 HTML-to-PDF fallback 链路生成 PDF。
 
 这种方式的优势是无需要求宿主机额外安装 Word、LibreOffice 或任何本地 Office 组件；代价是对于老 `.doc` 的复杂版式，只能保证可读文本尽可能完整，无法像 `DOCX` 一样高保真地恢复样式布局。
 
-最近修复的一处关键问题是：Word HTML 以前会先被挂到 `position:absolute; left:-9999px` 的离屏节点上，再交给 `html2pdf.js`。但 `html2pdf` 在内部会克隆这个源节点，并保留它的定位样式，导致克隆后的内容脱离文档流、高度塌为 `0`，最终生成空白 PDF。
+最近修复的一处关键问题是：Word HTML 以前会先被挂到 `position:absolute; left:-9999px` 的离屏节点上，再交给浏览器端 PDF fallback 渲染链路。这个渲染过程内部会克隆源节点，并保留它的定位样式，导致克隆后的内容脱离文档流、高度塌为 `0`，最终生成空白 PDF。
 
 现在这条路径改成了 `[src/features/files/word-pdf.ts](../src/features/files/word-pdf.ts)` 中的隐藏宿主模型：
 
 1. 外层宿主 `host` 负责“不可见、不可交互、不影响主界面”。
-2. 真正传给 `html2pdf` 的 `source` 内容节点保持普通文档流，不再带绝对定位。
+2. 真正传给浏览器端 PDF fallback 的 `source` 内容节点保持普通文档流，不再带绝对定位。
 3. 转换结束后立即清理宿主节点，不留下额外 DOM。
 
 这样既保持了本地渲染，也避免把布局信息在克隆阶段破坏掉。
+
+### 2.6 面向质量优先的 Word 转 PDF 链路排序
+从“转换质量第一，稳定性第二，性能第三”的用户目标出发，Word 转 PDF 的候选链路可以整理为四类：
+
+1. `Microsoft Word 原生导出`：通过 Word COM / `ExportAsFixedFormat` 直接调用本地 Word。这通常是最接近用户在 Word 中手动导出 PDF 的结果，应被视为质量最高的方案。
+2. `LibreOffice CLI`：通过 `soffice --headless --convert-to pdf` 执行本地命令行导出。它更适合跨平台和批量任务，但在复杂 Office 样式上通常略逊于 Word 原生。
+3. `browser HTML fallback`：通过 `mammoth` / `word-extractor` 提取 HTML，再由 `html2pdf.js` 生成 PDF。这条链路的可用性最好，但复杂版式的保真度最低。
+4. `Python 封装层`：例如 `docx2pdf`、`pywin32`、UNO / `unoconv` 之类方案。它们本质上仍然是对 Word 或 LibreOffice 的调用包装，不提供新的渲染引擎，因此不应被当成独立的高保真优先级。
+
+按质量优先的目标，当前实现的默认顺序为：
+
+1. `local Microsoft Word`
+2. `LibreOffice CLI`
+3. `browser HTML fallback`
+
+这和“CLI 优先”的运维取向不同。CLI-first 更有利于无人值守批处理和跨平台部署；但如果把“像 Word 原生导出那样保真”作为第一目标，那么本地 Word 原生导出更应排在首位。
+
+因此，当前实现已把自动链路收敛为 `Word COM -> LibreOffice CLI -> HTML`，同时继续保留显式指定后端的能力。为了让用户在等待过程中知道当前到底走的是哪条路径，`[src/App.tsx](../src/App.tsx)` 中的 Word 转 PDF 流程会把“当前方法”写入共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)`，使进度卡在显示百分比和已用时长的同时，也直接暴露当前采用的转换方式。
 
 <a id="ai-image-enhancement"></a>
 ## 3. UI无缝结合的 AI 本地放大器算法

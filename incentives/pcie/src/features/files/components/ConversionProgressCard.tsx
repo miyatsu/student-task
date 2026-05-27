@@ -1,7 +1,11 @@
+import { useEffect, useState } from 'react';
+
 export interface ConversionProgressValue {
   completed: number;
   total: number;
   currentFileName: string | null;
+  startedAt?: number;
+  detailLabel?: string | null;
 }
 
 interface ConversionProgressCardProps {
@@ -17,11 +21,33 @@ export function ConversionProgressCard({
   currentLabel = 'Now converting',
   finalizingLabel = 'Finalizing converted files',
 }: ConversionProgressCardProps) {
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!progress.startedAt) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [progress.startedAt]);
+
   const completedCount = progress.completed;
   const totalCount = progress.total;
   const progressRatio = totalCount > 0 ? completedCount / totalCount : 0;
   const progressPercent = Math.round(progressRatio * 100);
   const progressDegrees = progressRatio * 360;
+  const elapsedSeconds = progress.startedAt
+    ? Math.max(0, Math.floor((currentTime - progress.startedAt) / 1000))
+    : null;
+  const elapsedLabel = elapsedSeconds === null
+    ? null
+    : `Elapsed ${Math.floor(elapsedSeconds / 60).toString().padStart(2, '0')}:${(elapsedSeconds % 60).toString().padStart(2, '0')}`;
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 md:flex-row md:items-center md:gap-4" role="status" aria-live="polite">
@@ -38,11 +64,19 @@ export function ConversionProgressCard({
       <div className="min-w-0 flex-1">
         <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <p className="text-sm font-semibold text-emerald-900">{title}</p>
-          <p className="text-sm font-medium text-emerald-700">{completedCount}/{totalCount}</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-emerald-700">
+            {elapsedLabel && <p>{elapsedLabel}</p>}
+            <p>{completedCount}/{totalCount}</p>
+          </div>
         </div>
         <p className="truncate text-xs text-emerald-700">
           {progress.currentFileName ? `${currentLabel} ${progress.currentFileName}` : finalizingLabel}
         </p>
+        {progress.detailLabel && (
+          <p className="truncate pt-1 text-xs font-medium text-emerald-800">
+            {progress.detailLabel}
+          </p>
+        )}
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100">
           <div
             className="h-full rounded-full bg-emerald-500 transition-all duration-300"

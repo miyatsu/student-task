@@ -1,103 +1,115 @@
-import { Download, FileText, Files, Image as ImageIcon, Lock, ScanText, Sparkles, Wand2 } from 'lucide-react';
+import { Lock, Sparkles } from 'lucide-react';
 
-const heroHighlights = [
-  {
-    icon: Files,
-    title: 'Unified intake',
-    description: 'Drop in PDFs, images, and Word files.',
-    accentClass: 'bg-sky-50 text-sky-700 border-sky-100',
-  },
-  {
-    icon: FileText,
-    title: 'Edit and convert',
-    description: 'Merge, split, compress, and convert.',
-    accentClass: 'bg-amber-50 text-amber-700 border-amber-100',
-  },
-  {
-    icon: Wand2,
-    title: 'Enhance and read',
-    description: 'Upscale images. Preview fast. Pull text.',
-    accentClass: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  },
-  {
-    icon: Download,
-    title: 'Review and export',
-    description: 'Review results, ask AI, export ZIPs.',
-    accentClass: 'bg-rose-50 text-rose-700 border-rose-100',
-  },
-];
-
-const trustSignals = [
-  {
-    icon: Lock,
-    title: 'Local-first processing',
-    description: 'Editing and export stay in-browser by default.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Gemini when you choose it',
-    description: 'AI stays off until you add a key.',
-  },
-];
-
-export default function HomeHero() {
+function DocumentGlyph({ label, toneClass }: { label: string; toneClass: string }) {
   return (
-    <header className="mb-10">
-      <div className="relative overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-[0_32px_80px_-48px_rgba(15,23,42,0.35)]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(125,211,252,0.35),transparent_34%),radial-gradient(circle_at_top_right,rgba(167,243,208,0.28),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]" />
-        <div className="absolute -top-16 right-0 h-40 w-40 rounded-full bg-amber-200/40 blur-3xl" />
-        <div className="absolute -bottom-20 left-12 h-48 w-48 rounded-full bg-sky-200/30 blur-3xl" />
+    <span className="relative inline-flex h-12 w-10 shrink-0 rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/40">
+      <span className="absolute right-0 top-0 h-3.5 w-3.5 rounded-bl-lg border-b border-l border-slate-200 bg-slate-50" />
+      <span className={`absolute inset-x-1.5 bottom-1.5 inline-flex items-center justify-center rounded-md px-1.5 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.18em] ${toneClass}`}>
+        {label}
+      </span>
+    </span>
+  );
+}
 
-        <div className="relative px-6 py-8 md:px-10 md:py-10">
-          <div className="flex flex-wrap gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-            <span className="rounded-full border border-zinc-200 bg-white/80 px-3 py-1">Local-first workspace</span>
-            <span className="rounded-full border border-zinc-200 bg-white/80 px-3 py-1">PDF · Image · Word</span>
-            <span className="rounded-full border border-zinc-200 bg-white/80 px-3 py-1">AI optional</span>
-          </div>
+function PdfDocumentGlyph() {
+  return <DocumentGlyph label="PDF" toneClass="bg-rose-50 text-rose-700" />;
+}
 
-          <div className="mt-6 grid gap-8 lg:grid-cols-[1.15fr_0.95fr] lg:items-start">
+function WordDocumentGlyph() {
+  return <DocumentGlyph label="DOC" toneClass="bg-sky-50 text-sky-700" />;
+}
+
+function ImageFileGlyph() {
+  return <DocumentGlyph label="IMG" toneClass="bg-emerald-50 text-emerald-700" />;
+}
+
+const capabilities = [
+  {
+    icon: PdfDocumentGlyph,
+    title: 'PDF Workflow',
+    description: 'Merge, split, compress, extract pages, and export clean results.',
+  },
+  {
+    icon: ImageFileGlyph,
+    title: 'Image Workflow',
+    description: 'Rotate, enhance, convert to PDF, or extract text when AI is enabled.',
+  },
+  {
+    icon: WordDocumentGlyph,
+    title: 'Word Workflow',
+    description: 'Convert DOCX in-browser and handle legacy DOC through the local server path.',
+  },
+];
+
+interface HomeHeroProps {
+  onChooseFiles: () => void;
+}
+
+export function HomeCapabilityStrip() {
+  return (
+    <section aria-label="Workspace capabilities">
+      <div className="overflow-hidden rounded-[1.8rem] border border-[color:var(--home-ribbon-border)] bg-[var(--home-ribbon-bg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+        <div className="grid divide-y divide-[color:var(--home-ribbon-border)] md:grid-cols-3 md:divide-x md:divide-y-0">
+        {capabilities.map(({ icon: Icon, title, description }) => (
+          <article
+            key={title}
+            className="flex items-start gap-4 px-5 py-5 sm:px-6"
+          >
+            <div className="shrink-0 pt-0.5">
+              <Icon />
+            </div>
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-3 py-1 text-sm font-medium text-sky-700">
-                <ImageIcon className="h-4 w-4" />
-                Sort. Convert. Extract. Export.
-              </div>
-
-              <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-zinc-950 md:text-5xl md:leading-[1.05]">
-                One workspace for PDFs, images, and Word.
-              </h1>
-
-              <p className="mt-5 max-w-3xl text-base leading-8 text-zinc-600 md:text-lg">
-                Drop in mixed files. Reorder fast. Turn images and Word into PDF. Merge, compress, extract, enhance, then export.
-              </p>
-
-              <div className="mt-6 grid gap-3 md:grid-cols-2">
-                {trustSignals.map(({ icon: Icon, title, description }) => (
-                  <div key={title} className="rounded-2xl border border-zinc-200/80 bg-white/80 p-4 backdrop-blur-sm">
-                    <div className="flex items-center gap-3 text-zinc-900">
-                      <div className="rounded-xl bg-zinc-100 p-2">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <p className="text-sm font-semibold">{title}</p>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
-                  </div>
-                ))}
-              </div>
+              <h2 className="text-base font-semibold text-zinc-950">
+                {title}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">{description}</p>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              {heroHighlights.map(({ icon: Icon, title, description, accentClass }) => (
-                <div key={title} className="rounded-2xl border border-zinc-200/80 bg-white/80 p-5 backdrop-blur-sm">
-                  <div className={`inline-flex rounded-2xl border px-3 py-2 ${accentClass}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h2 className="mt-4 text-lg font-semibold text-zinc-900">{title}</h2>
-                  <p className="mt-2 text-sm leading-6 text-zinc-600">{description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          </article>
+        ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
+  return (
+    <header className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top,rgba(233,223,209,0.7),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.94),rgba(250,247,242,0.9))] p-6 shadow-[var(--home-soft-shadow)] sm:p-8 lg:p-10">
+      <div className="max-w-6xl">
+        <div className="flex flex-col items-center gap-3 text-sm text-zinc-600 sm:flex-row sm:flex-wrap sm:justify-center sm:text-base">
+          <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-white/80 px-3 py-1.5 shadow-sm shadow-white/80">
+            <Lock className="h-4 w-4 text-zinc-500" />
+            Local-first by default
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-white/80 px-3 py-1.5 shadow-sm shadow-white/80">
+            <Sparkles className="h-4 w-4 text-zinc-500" />
+            AI only when configured
+          </span>
+        </div>
+
+        <h1 className="mx-auto mt-6 max-w-full text-center text-3xl font-extrabold tracking-[-0.035em] text-zinc-950 sm:text-4xl md:text-[1.45rem] md:leading-[1.12] md:whitespace-nowrap lg:text-[1.7rem] xl:text-[1.9rem] 2xl:text-[2.05rem]">
+          PDF, Word, and Images in One Local-First Workspace
+        </h1>
+
+        <div className="mx-auto mt-5 max-w-[56rem] space-y-1 text-center text-base leading-8 text-zinc-600 sm:text-lg">
+          <p className="md:text-[1rem] md:whitespace-nowrap">
+            Drop mixed files, organize them visually, convert or extract what you need,{' '}
+            <span className="whitespace-nowrap">and export the result.</span>
+          </p>
+          <p>LLM stays off until you configure a key.</p>
+        </div>
+
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={onChooseFiles}
+            className="inline-flex items-center justify-center rounded-full bg-[var(--home-accent)] px-6 py-3 text-sm font-semibold text-white shadow-[var(--home-card-shadow)] transition-colors hover:bg-[var(--home-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--home-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            Choose files
+          </button>
+          <p className="text-sm text-zinc-500">Open the file picker and continue in the same local-first workspace.</p>
+        </div>
+
       </div>
     </header>
   );

@@ -2,7 +2,17 @@
 
 PCIE 是一个本地优先的 Web 文档工作区。上传、排序、转换、提取、增强、导出，在同一块面板里完成。
 
-当前工作区支持更直观的排序胶囊按钮、按名称自然排序、逐文件上移/下移，并且在图片与 Word 批量转 PDF 时都会显示实时绿色进度卡片；旧版 `.doc` 文档也可以通过内置的服务端提取链路转成 PDF。
+当前工作区支持更直观的排序胶囊按钮、按名称自然排序、逐文件上移/下移，并且在图片与 Word 批量转 PDF 时都会显示实时绿色进度卡片；Word 转 PDF 进度现在会同时显示已用时长与当前采用的转换方式，完成时会在列表内收束到 `100%` 而不是打断式成功弹窗。当前默认的高保真 Word 转 PDF 策略以“转换质量第一，稳定性第二，性能第三”为原则，按 `本地 Microsoft Word 原生导出 -> LibreOffice CLI -> 浏览器 HTML fallback` 的顺序尝试；旧版 `.doc` 文档也可以通过内置的服务端提取链路转成 PDF。
+
+首页入口也已调整为更偏“工作台入口”而不是“功能陈列”的结构：首屏从上到下依次堆叠为 Hero 价值说明、PDF / Image / Word capability strip、以及 Workspace Upload 面板，但三者已经被收进同一个共享首屏外壳中，Workflow 区与 Upload 区进一步落在同一块内层 surface 上，减少了“多张独立白卡”的分离感。Hero 区现在把 trust pills、主标题、正文和主 CTA 都统一到同一条中心轴上；主按钮 **Choose files** 直接复用页面现有的文件选择逻辑。副标题第二句为 `LLM stays off until you configure a key.`，同时首句末尾的 `and export the result.` 会保持为同一段不拆行。中段能力区也从三张分离卡片收束成一条共享的 workflow ribbon，并把 PDF / Image / Word 三种图标统一成同一种文件徽章语言。最下方的 Workspace Upload 面板则进一步收紧为一张更窄的上传卡，去掉了虚线 demo 感边框，改用明确的 **Choose files** 按钮作为主 CTA，并把拖拽提示降为次级文案 `or drag and drop files here`。最后一轮样式收尾又把首页整体切到了更暖的中性色底、统一的阴影 token、深蓝强调色以及本地优先的 sans 字体栈上。
+
+为了避免首页首包继续膨胀，当前前端构建还额外把若干重工具链改成了按需加载：`PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 四个 modal 现在都通过 `React.lazy()` 独立拆包，而 `pdf-lib`、`jszip`、`mammoth`、`browser-image-compression`、Gemini helper 以及 Word HTML fallback 所需的浏览器渲染链路也都改成运行时 `import()`。同时 Vite 会把 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`tfjs` 等重依赖拆成独立 vendor chunk；`chunkSizeWarningLimit` 也被调到 `900`，让构建告警聚焦在真正异常的超大 chunk，而不是这些本就只在用户触发对应功能时才下载的惰性工具块。
+
+当前项目认可的 Word 转 PDF 可行链路主要有四类：
+- `Microsoft Word 原生导出`：Windows + 本地 Word 可用时，通常最接近用户在 Word 中“另存为 PDF”的结果，质量最高。
+- `LibreOffice CLI`：适合跨平台和批处理环境，稳定性与自动化体验较好，但复杂 Office 样式的保真度通常略低于 Word 原生。
+- `浏览器 HTML fallback`：无需额外本地 Office 依赖，兜底能力最强，但复杂布局的保真度最低。
+- `Python 封装层`：如 `docx2pdf`、`pywin32`、UNO / `unoconv` 等，更多是对 Word 或 LibreOffice 的调用包装，不是新的独立渲染引擎，因此不单独作为默认优先级。
 
 Word 转 PDF 继续遵循 local-first：`DOCX` 在浏览器内直接转 HTML 并生成 PDF，旧版 `.doc` 走项目内置的本地 Express 提取链路，不依赖外部 Office 安装、云端转换服务或额外运行时。最近还修复了 Word 导出偶发空白 PDF 的问题，当前渲染会通过隐藏宿主层在本地完成，避免离屏源节点被 `html2pdf` 克隆后高度塌成 `0`。
 
@@ -51,7 +61,7 @@ Word 转 PDF 继续遵循 local-first：`DOCX` 在浏览器内直接转 HTML 并
 
 开发模式补充说明：`npm run dev` 默认监听 `http://localhost:3000`；如果 3000 已被占用，服务会自动切换到下一个可用端口，并在终端打印实际访问地址。
 
-生产预览补充说明：`npm run preview` 现在会以 `NODE_ENV=production` 启动完整的 Express + API 服务器，并直接服务 `dist/` 产物，因此像 `.doc` 转 PDF、PDF 转图等依赖后端接口的功能也能在预览阶段真实可用；如果只想看纯静态前端，可使用 `npm run preview:static`。
+生产预览补充说明：`npm run preview` 现在会以 `NODE_ENV=production` 启动完整的 Express + API 服务器，并直接服务 `dist/` 产物，因此像 `.doc` 转 PDF、PDF 转图等依赖后端接口的功能也能在预览阶段真实可用；如果只想看纯静态前端，可使用 `npm run preview:static`。由于首页首屏之外的重工具链已被拆成惰性 vendor chunk，预览生产包时请顺手点开 AI 增强、PDF 编辑、预览、OCR / AI 对话等入口，确认这些按需下载的 chunk 也能正常拉起。
 
 仓库中的自动化回归测试通过 `npm test` 运行，当前覆盖纯逻辑、文件列表 UI 回归、自然排序与行内移动规则、图片/Word 转 PDF 进度展示、旧版 `.doc` 提取辅助逻辑、PDF 页操作、Gemini 运行时配置加载以及服务端运行时配置 / PDF 压缩辅助逻辑；另有一组开发期诊断与手工验证脚本位于 `scripts/experiments/`，按 `diagnostics/`、`manual/`、`spikes/` 分类保存，它们不会进入默认测试流水线。
 

@@ -68,6 +68,27 @@ function createProps(overrides: Partial<ComponentProps<typeof WordFilesSection>>
 }
 
 describe('WordFilesSection', () => {
+  it('shows elapsed time for in-progress word conversions', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T09:55:30Z'));
+
+    const props = createProps({
+      isConverting: true,
+      conversionProgress: {
+        completed: 1,
+        total: 3,
+        currentFileName: 'report.docx',
+        startedAt: new Date('2026-05-27T09:54:05Z').getTime(),
+      },
+    });
+
+    render(<WordFilesSection {...props} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Elapsed 01:25');
+
+    vi.useRealTimers();
+  });
+
   it('routes per-file actions through the provided callbacks', async () => {
     const user = userEvent.setup();
     const props = createProps();
@@ -127,6 +148,7 @@ describe('WordFilesSection', () => {
         completed: 2,
         total: 5,
         currentFileName: 'archive.doc',
+        detailLabel: 'Method: browser HTML fallback',
       },
     });
 
@@ -135,6 +157,24 @@ describe('WordFilesSection', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Converting Word documents to PDF');
     expect(screen.getByRole('status')).toHaveTextContent('2/5');
     expect(screen.getByRole('status')).toHaveTextContent('Now converting archive.doc');
+    expect(screen.getByRole('status')).toHaveTextContent('Method: browser HTML fallback');
+  });
+
+  it('shows a completed finalizing state at 100 percent', () => {
+    const props = createProps({
+      isConverting: true,
+      conversionProgress: {
+        completed: 5,
+        total: 5,
+        currentFileName: null,
+      },
+    });
+
+    render(<WordFilesSection {...props} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('5/5');
+    expect(screen.getByRole('status')).toHaveTextContent('Finalizing converted files');
+    expect(screen.getByRole('status')).toHaveTextContent('100%');
   });
 
   it('saves inline rename edits with the current file id', async () => {
