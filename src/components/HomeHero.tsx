@@ -93,7 +93,6 @@ export default function HomeHero() {
           <p>LLM stays off until you configure a key.</p>
         </div>
 
-        <p className="mt-8 text-sm text-slate-600">Supports PDF · DOCX · DOC · PNG · JPG</p>
       </div>
     </header>
   );
