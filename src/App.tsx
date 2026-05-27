@@ -53,15 +53,15 @@ const isNativeWordPdfBackend = (value: string | null): value is NativeWordPdfBac
 );
 
 const buildNextWordConversionMethodLabel = (
-  cliUnavailable: boolean,
   wordUnavailable: boolean,
+  cliUnavailable: boolean,
 ) => {
-  if (!cliUnavailable) {
-    return buildWordConversionMethodLabel('libreoffice-cli');
-  }
-
   if (!wordUnavailable) {
     return buildWordConversionMethodLabel('word-com');
+  }
+
+  if (!cliUnavailable) {
+    return buildWordConversionMethodLabel('libreoffice-cli');
   }
 
   return buildWordConversionMethodLabel('html-fallback');
@@ -479,12 +479,12 @@ export default function App() {
     const nativeErrors: Error[] = [];
     const nativeBackendsToTry: NativeWordPdfBackend[] = [];
 
-    if (!libreOfficeWordPdfBackendUnavailableRef.current) {
-      nativeBackendsToTry.push('libreoffice-cli');
-    }
-
     if (!wordComPdfBackendUnavailableRef.current) {
       nativeBackendsToTry.push('word-com');
+    }
+
+    if (!libreOfficeWordPdfBackendUnavailableRef.current) {
+      nativeBackendsToTry.push('libreoffice-cli');
     }
 
     for (const backend of nativeBackendsToTry) {
@@ -539,8 +539,8 @@ export default function App() {
     const startedAt = Date.now();
     let completedSuccessfully = false;
     let lastMethodLabel = buildNextWordConversionMethodLabel(
-      libreOfficeWordPdfBackendUnavailableRef.current,
       wordComPdfBackendUnavailableRef.current,
+      libreOfficeWordPdfBackendUnavailableRef.current,
     );
 
     setIsConverting(true);
@@ -556,8 +556,8 @@ export default function App() {
 
       for (const [index, word] of selected.entries()) {
         lastMethodLabel = buildNextWordConversionMethodLabel(
-          libreOfficeWordPdfBackendUnavailableRef.current,
           wordComPdfBackendUnavailableRef.current,
+          libreOfficeWordPdfBackendUnavailableRef.current,
         );
 
         updateWordConversionProgress({

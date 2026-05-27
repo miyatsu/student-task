@@ -85,7 +85,7 @@ export interface AppFile {
 3. `browser HTML fallback`：通过 `mammoth` / `word-extractor` 提取 HTML，再由 `html2pdf.js` 生成 PDF。这条链路的可用性最好，但复杂版式的保真度最低。
 4. `Python 封装层`：例如 `docx2pdf`、`pywin32`、UNO / `unoconv` 之类方案。它们本质上仍然是对 Word 或 LibreOffice 的调用包装，不提供新的渲染引擎，因此不应被当成独立的高保真优先级。
 
-按质量优先的目标，推荐默认顺序应为：
+按质量优先的目标，当前实现的默认顺序为：
 
 1. `local Microsoft Word`
 2. `LibreOffice CLI`
@@ -93,7 +93,7 @@ export interface AppFile {
 
 这和“CLI 优先”的运维取向不同。CLI-first 更有利于无人值守批处理和跨平台部署；但如果把“像 Word 原生导出那样保真”作为第一目标，那么本地 Word 原生导出更应排在首位。
 
-因此，后续实现应把自动链路收敛为 `Word COM -> LibreOffice CLI -> HTML`，同时继续保留显式指定后端的能力。为了让用户在等待过程中知道当前到底走的是哪条路径，`[src/App.tsx](../src/App.tsx)` 中的 Word 转 PDF 流程仍应把“当前方法”写入共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)`，使进度卡在显示百分比和已用时长的同时，也直接暴露当前采用的转换方式。
+因此，当前实现已把自动链路收敛为 `Word COM -> LibreOffice CLI -> HTML`，同时继续保留显式指定后端的能力。为了让用户在等待过程中知道当前到底走的是哪条路径，`[src/App.tsx](../src/App.tsx)` 中的 Word 转 PDF 流程会把“当前方法”写入共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)`，使进度卡在显示百分比和已用时长的同时，也直接暴露当前采用的转换方式。
 
 <a id="ai-image-enhancement"></a>
 ## 3. UI无缝结合的 AI 本地放大器算法

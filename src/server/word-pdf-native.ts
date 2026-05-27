@@ -79,25 +79,40 @@ export async function resolveNativeWordPdfBackend(
   const checkWordComAvailability = dependencies.checkWordComAvailability ?? defaultCheckWordComAvailability;
   const findLibreOfficeExecutable = dependencies.findLibreOfficeExecutable ?? defaultFindLibreOfficeExecutable;
 
-  const availableBackends: ResolvedNativeWordPdfBackend[] = [];
+  if (preferredBackend === 'word-com') {
+    if (platform === 'win32' && await checkWordComAvailability()) {
+      return { kind: 'word-com' };
+    }
 
-  const executablePath = await findLibreOfficeExecutable();
-  if (executablePath) {
-    availableBackends.push({
-      kind: 'libreoffice-cli',
-      executablePath,
-    });
+    return null;
+  }
+
+  if (preferredBackend === 'libreoffice-cli') {
+    const executablePath = await findLibreOfficeExecutable();
+
+    if (executablePath) {
+      return {
+        kind: 'libreoffice-cli',
+        executablePath,
+      };
+    }
+
+    return null;
   }
 
   if (platform === 'win32' && await checkWordComAvailability()) {
-    availableBackends.push({ kind: 'word-com' });
+    return { kind: 'word-com' };
   }
 
-  if (preferredBackend) {
-    return availableBackends.find((backend) => backend.kind === preferredBackend) ?? null;
+  const executablePath = await findLibreOfficeExecutable();
+  if (executablePath) {
+    return {
+      kind: 'libreoffice-cli',
+      executablePath,
+    };
   }
 
-  return availableBackends[0] ?? null;
+  return null;
 }
 
 export async function convertWordDocumentToPdf(

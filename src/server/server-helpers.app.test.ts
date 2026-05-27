@@ -108,10 +108,20 @@ describe('word conversion helpers', () => {
 });
 
 describe('native word pdf helpers', () => {
-  it('prefers the LibreOffice CLI backend when it is available', async () => {
+  it('prefers Microsoft Word COM when both native backends are available', async () => {
     const backend = await resolveNativeWordPdfBackend(undefined, {
       platform: 'win32',
       checkWordComAvailability: async () => true,
+      findLibreOfficeExecutable: async () => 'C:/LibreOffice/program/soffice.exe',
+    });
+
+    expect(backend).toEqual({ kind: 'word-com' });
+  });
+
+  it('falls back to the LibreOffice CLI backend when Word COM is unavailable', async () => {
+    const backend = await resolveNativeWordPdfBackend(undefined, {
+      platform: 'win32',
+      checkWordComAvailability: async () => false,
       findLibreOfficeExecutable: async () => 'C:/LibreOffice/program/soffice.exe',
     });
 
@@ -119,16 +129,6 @@ describe('native word pdf helpers', () => {
       kind: 'libreoffice-cli',
       executablePath: 'C:/LibreOffice/program/soffice.exe',
     });
-  });
-
-  it('falls back to Microsoft Word COM when LibreOffice CLI is unavailable', async () => {
-    const backend = await resolveNativeWordPdfBackend(undefined, {
-      platform: 'win32',
-      checkWordComAvailability: async () => true,
-      findLibreOfficeExecutable: async () => null,
-    });
-
-    expect(backend).toEqual({ kind: 'word-com' });
   });
 
   it('can resolve a specifically requested backend', async () => {
@@ -139,6 +139,19 @@ describe('native word pdf helpers', () => {
     });
 
     expect(backend).toEqual({ kind: 'word-com' });
+  });
+
+  it('can resolve LibreOffice CLI when it is explicitly requested', async () => {
+    const backend = await resolveNativeWordPdfBackend('libreoffice-cli', {
+      platform: 'win32',
+      checkWordComAvailability: async () => true,
+      findLibreOfficeExecutable: async () => 'C:/LibreOffice/program/soffice.exe',
+    });
+
+    expect(backend).toEqual({
+      kind: 'libreoffice-cli',
+      executablePath: 'C:/LibreOffice/program/soffice.exe',
+    });
   });
 
   it('reports no native backend when neither Word nor LibreOffice is available', async () => {
