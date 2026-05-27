@@ -63,6 +63,8 @@ export interface AppFile {
 
 Phase 1 的结构性调整主要发生在 `[src/App.tsx](../src/App.tsx)`：Hero、Workflow strip、Upload panel 被统一包进一个共享首屏外壳，后两者进一步被收进同一个内层 surface，并通过更紧的垂直节奏和统一边框/背景减少“多块平级卡片”的割裂感。对应地，`[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 里的 `HomeCapabilityStrip` 去掉了原有的外部顶边距，改由首屏组合容器统一控制模块间节奏。
 
+Phase 2 的重点回到 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)`：trust pills 改为居中排列，supporting copy 也与主标题共享中心轴；同时重新引入 Hero 级主 CTA，并通过 `HomeHeroProps.onChooseFiles` 直接复用 `[src/App.tsx](../src/App.tsx)` 中现有的 `openFilePicker()`。这样 Hero 本身就承担了“阅读后立刻开始”的第一行动点，但没有新增第二套上传实现。
+
 这里的关键约束是：只允许有一套上传逻辑。当前实现把这套逻辑完全收敛到上传面板本身，统一复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。面板本身保留 `role="button"`、键盘触发和整卡点击行为，用同一个隐藏 `input[type=file]` 同时支撑文件对话框选择与拖拽导入。
 
 最近一轮微调里，Workspace Upload 卡片回退到了更早一版的居中式视觉骨架：顶部是圆形上传图标，其下只保留 `Workspace Upload` 标签、格式胶囊以及一条最佳实践提示 `Choose files from your device, or drag and drop them here.`。原先的 `Drop files into your workspace` 大标题与长说明段被移除，格式摘要也恢复为 `PDF`、`DOC / DOCX`、`PNG`、`JPG / JPEG` 这组更贴近该版设计的写法。

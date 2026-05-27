@@ -46,6 +46,10 @@ const capabilities = [
   },
 ];
 
+interface HomeHeroProps {
+  onChooseFiles: () => void;
+}
+
 export function HomeCapabilityStrip() {
   return (
     <section aria-label="Workspace capabilities">
@@ -69,11 +73,11 @@ export function HomeCapabilityStrip() {
   );
 }
 
-export default function HomeHero() {
+export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
   return (
     <header className="relative overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.12),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.82))] p-6 sm:p-8 lg:p-10">
       <div className="max-w-6xl">
-        <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex flex-col items-center gap-3 text-sm text-zinc-600 sm:flex-row sm:flex-wrap sm:justify-center sm:text-base">
           <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/75 px-3 py-1.5">
             <Lock className="h-4 w-4 text-slate-500" />
             Local-first by default
@@ -88,12 +92,23 @@ export default function HomeHero() {
           PDF, Word, and Images in One Local-First Workspace
         </h1>
 
-        <div className="mt-5 max-w-[56rem] space-y-1 text-base leading-8 text-slate-700 sm:text-lg">
+        <div className="mx-auto mt-5 max-w-[56rem] space-y-1 text-center text-base leading-8 text-zinc-600 sm:text-lg">
           <p className="md:text-[1rem] md:whitespace-nowrap">
             Drop mixed files, organize them visually, convert or extract what you need,{' '}
             <span className="whitespace-nowrap">and export the result.</span>
           </p>
           <p>LLM stays off until you configure a key.</p>
+        </div>
+
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={onChooseFiles}
+            className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            Choose files
+          </button>
+          <p className="text-sm text-zinc-500">Open the file picker and continue in the same local-first workspace.</p>
         </div>
 
       </div>
