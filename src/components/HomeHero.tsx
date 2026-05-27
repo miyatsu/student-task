@@ -88,8 +88,11 @@ export default function HomeHero() {
           PDF, Word, and Images in One Local-First Workspace
         </h1>
 
-        <div className="mt-5 max-w-2xl space-y-1 text-base leading-8 text-slate-700 sm:text-lg">
-          <p>Drop mixed files, organize them visually, convert or extract what you need, and export the result.</p>
+        <div className="mt-5 max-w-[56rem] space-y-1 text-base leading-8 text-slate-700 sm:text-lg">
+          <p className="md:text-[1rem] md:whitespace-nowrap">
+            Drop mixed files, organize them visually, convert or extract what you need,{' '}
+            <span className="whitespace-nowrap">and export the result.</span>
+          </p>
           <p>LLM stays off until you configure a key.</p>
         </div>
 
