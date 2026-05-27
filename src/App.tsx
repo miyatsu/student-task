@@ -1083,7 +1083,7 @@ export default function App() {
         <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white/85 shadow-sm shadow-slate-200/70">
           <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
             <div className="border-b border-slate-200 lg:border-b-0 lg:border-r lg:border-slate-200/80">
-              <HomeHero onChooseFiles={openFilePicker} />
+              <HomeHero />
             </div>
 
             <div className="p-6 sm:p-8 lg:p-10">

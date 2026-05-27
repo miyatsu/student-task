@@ -19,7 +19,6 @@ const capabilities = [
 ];
 
 interface HomeHeroProps {
-  onChooseFiles: () => void;
 }
 
 export function HomeCapabilityStrip() {
@@ -45,7 +44,7 @@ export function HomeCapabilityStrip() {
   );
 }
 
-export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
+export default function HomeHero({}: HomeHeroProps) {
   return (
     <header className="relative overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.12),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.82))] p-6 sm:p-8 lg:p-10">
       <div className="max-w-3xl">
@@ -68,16 +67,7 @@ export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
           Drop mixed files, organize them visually, convert or extract what you need, and export the result. Gemini stays off until you configure a key.
         </p>
 
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={onChooseFiles}
-            className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
-          >
-            Choose files
-          </button>
-          <p className="text-sm text-slate-600">Supports PDF · DOCX · DOC · PNG · JPG</p>
-        </div>
+        <p className="mt-8 text-sm text-slate-600">Supports PDF · DOCX · DOC · PNG · JPG</p>
       </div>
     </header>
   );
