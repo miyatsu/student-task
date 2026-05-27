@@ -13,6 +13,13 @@ import {
   extractLegacyWordHtml,
   isLegacyWordDocument,
 } from './word-conversion';
+import {
+  buildNativeWordPdfUnavailableMessage,
+  convertWordDocumentToPdf,
+  NativeWordPdfUnavailableError,
+  resolveExistingExecutablePath,
+  resolveNativeWordPdfBackend,
+} from './word-pdf-native';
 
 describe('server compression helpers', () => {
   it('maps compression levels to Ghostscript settings', () => {
@@ -97,5 +104,69 @@ describe('word conversion helpers', () => {
     expect(html).toContain('<p>Legacy body</p>');
     expect(html).toContain('<section><h2>Headers</h2><p>Header text</p></section>');
     expect(html).toContain('<section><h2>Text Boxes</h2><p>Textbox text</p></section>');
+  });
+});
+
+describe('native word pdf helpers', () => {
+  it('prefers Microsoft Word COM on Windows when it is available', async () => {
+    const backend = await resolveNativeWordPdfBackend({
+      platform: 'win32',
+      checkWordComAvailability: async () => true,
+      findLibreOfficeExecutable: async () => 'C:/LibreOffice/program/soffice.exe',
+    });
+
+    expect(backend).toEqual({ kind: 'word-com' });
+  });
+
+  it('falls back to LibreOffice when Word COM is unavailable', async () => {
+    const backend = await resolveNativeWordPdfBackend({
+      platform: 'win32',
+      checkWordComAvailability: async () => false,
+      findLibreOfficeExecutable: async () => 'C:/LibreOffice/program/soffice.exe',
+    });
+
+    expect(backend).toEqual({
+      kind: 'libreoffice',
+      executablePath: 'C:/LibreOffice/program/soffice.exe',
+    });
+  });
+
+  it('reports no native backend when neither Word nor LibreOffice is available', async () => {
+    const backend = await resolveNativeWordPdfBackend({
+      platform: 'win32',
+      checkWordComAvailability: async () => false,
+      findLibreOfficeExecutable: async () => null,
+    });
+
+    expect(backend).toBeNull();
+    expect(buildNativeWordPdfUnavailableMessage()).toContain('Microsoft Word or LibreOffice');
+  });
+
+  it('resolves the first existing executable path from a candidate list', () => {
+    const executablePath = resolveExistingExecutablePath(
+      ['missing.exe', 'existing.exe', 'later.exe'],
+      (candidate) => candidate === 'existing.exe',
+    );
+
+    expect(executablePath).toBe('existing.exe');
+  });
+
+  it('runs the selected native backend and returns its name', async () => {
+    const runWordComExport = vi.fn().mockResolvedValue(undefined);
+
+    const backend = await convertWordDocumentToPdf('input.docx', 'output.pdf', {
+      resolveNativeBackend: async () => ({ kind: 'word-com' }),
+      runWordComExport,
+      pathExists: (targetPath) => targetPath === 'output.pdf',
+    });
+
+    expect(backend).toBe('word-com');
+    expect(runWordComExport).toHaveBeenCalledWith('input.docx', 'output.pdf');
+  });
+
+  it('throws a dedicated unavailable error when no native backend exists', async () => {
+    await expect(convertWordDocumentToPdf('input.docx', 'output.pdf', {
+      resolveNativeBackend: async () => null,
+    })).rejects.toBeInstanceOf(NativeWordPdfUnavailableError);
   });
 });

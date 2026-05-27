@@ -68,6 +68,27 @@ function createProps(overrides: Partial<ComponentProps<typeof WordFilesSection>>
 }
 
 describe('WordFilesSection', () => {
+  it('shows elapsed time for in-progress word conversions', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T09:55:30Z'));
+
+    const props = createProps({
+      isConverting: true,
+      conversionProgress: {
+        completed: 1,
+        total: 3,
+        currentFileName: 'report.docx',
+        startedAt: new Date('2026-05-27T09:54:05Z').getTime(),
+      },
+    });
+
+    render(<WordFilesSection {...props} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Elapsed 01:25');
+
+    vi.useRealTimers();
+  });
+
   it('routes per-file actions through the provided callbacks', async () => {
     const user = userEvent.setup();
     const props = createProps();

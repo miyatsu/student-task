@@ -71,7 +71,9 @@ export default function App() {
     completed: number;
     total: number;
     currentFileName: string | null;
+    startedAt?: number;
   } | null>(null);
+  const nativeWordPdfBackendUnavailableRef = useRef(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -374,63 +376,156 @@ export default function App() {
     return html;
   };
 
+  const convertWordFileToNativePdf = async (file: File) => {
+    const formData = new FormData();
+    formData.append('word', file);
+
+    const response = await fetch('/api/word/convert-pdf', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (response.ok) {
+      nativeWordPdfBackendUnavailableRef.current = false;
+      return {
+        blob: await response.blob(),
+        backend: response.headers.get('X-Word-Pdf-Backend'),
+      };
+    }
+
+    let payload: { error?: string; code?: string } | null = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    if (payload?.code === 'native-backend-unavailable') {
+      nativeWordPdfBackendUnavailableRef.current = true;
+    }
+
+    throw new Error(
+      payload?.error
+      || `Server returned ${response.status} while exporting the Word file through the local native backend.`,
+    );
+  };
+
+  const renderWordHtmlToPdfBlob = async (html: string) => {
+    const renderHost = createWordPdfRenderHost(html);
+
+    try {
+      const opt: any = {
+        margin: 10,
+        filename: 'temp.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      return await html2pdf().set(opt).from(renderHost.source).output('blob');
+    } finally {
+      renderHost.dispose();
+    }
+  };
+
+  const convertWordFileToPdfBlob = async (word: AppFile) => {
+    let nativeError: Error | null = null;
+
+    if (!nativeWordPdfBackendUnavailableRef.current) {
+      try {
+        const nativeResult = await convertWordFileToNativePdf(word.file);
+        return {
+          blob: nativeResult.blob,
+          mode: 'native' as const,
+          backend: nativeResult.backend,
+        };
+      } catch (error) {
+        nativeError = error instanceof Error ? error : new Error(String(error));
+      }
+    }
+
+    try {
+      const html = await convertWordFileToHtml(word);
+      const blob = await renderWordHtmlToPdfBlob(html);
+      return {
+        blob,
+        mode: 'fallback' as const,
+        backend: null,
+      };
+    } catch (fallbackError) {
+      if (nativeError) {
+        const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        throw new Error(`${nativeError.message} Fallback rendering also failed: ${fallbackMessage}`);
+      }
+
+      throw fallbackError;
+    }
+  };
+
   const convertSelectedWords = async () => {
     const selected = selectFilesByIds(wordFiles, selectedWordIds);
     if (selected.length === 0) return;
+
+    const startedAt = Date.now();
 
     setIsConverting(true);
     setWordConversionProgress({
       completed: 0,
       total: selected.length,
       currentFileName: selected[0]?.name ?? null,
+      startedAt,
     });
     try {
       const newPdfs: AppFile[] = [];
+      let nativeConversionCount = 0;
+      let fallbackConversionCount = 0;
+
       for (const [index, word] of selected.entries()) {
         setWordConversionProgress({
           completed: index,
           total: selected.length,
           currentFileName: word.name,
+          startedAt,
         });
 
-        const html = await convertWordFileToHtml(word);
-        const renderHost = createWordPdfRenderHost(html);
-        
-        try {
-          const opt: any = {
-            margin: 10,
-            filename: 'temp.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          };
-          const pdfBlob = await html2pdf().set(opt).from(renderHost.source).output('blob');
-          
-          const baseName = word.name.replace(/\.[^/.]+$/, "");
-          const newName = `${baseName}.pdf`;
-          const newFile = new File([pdfBlob], newName, { type: 'application/pdf' });
-          
-          newPdfs.push({
-            id: Math.random().toString(36).substring(7),
-            file: newFile,
-            name: newName,
-            size: newFile.size,
-            type: 'pdf'
-          });
+        const conversionResult = await convertWordFileToPdfBlob(word);
 
-          setWordConversionProgress({
-            completed: index + 1,
-            total: selected.length,
-            currentFileName: selected[index + 1]?.name ?? null,
-          });
-        } finally {
-          renderHost.dispose();
+        if (conversionResult.mode === 'native') {
+          nativeConversionCount += 1;
+        } else {
+          fallbackConversionCount += 1;
         }
+
+        const baseName = word.name.replace(/\.[^/.]+$/, "");
+        const newName = `${baseName}.pdf`;
+        const newFile = new File([conversionResult.blob], newName, { type: 'application/pdf' });
+
+        newPdfs.push({
+          id: Math.random().toString(36).substring(7),
+          file: newFile,
+          name: newName,
+          size: newFile.size,
+          type: 'pdf'
+        });
+
+        setWordConversionProgress({
+          completed: index + 1,
+          total: selected.length,
+          currentFileName: selected[index + 1]?.name ?? null,
+          startedAt,
+        });
       }
       
       setPdfFiles(prev => [...prev, ...newPdfs]);
       setSelectedPdfIds(prev => new Set([...prev, ...newPdfs.map(f => f.id)]));
-      alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF!`);
+
+      if (nativeConversionCount === newPdfs.length) {
+        alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF using local native export!`);
+      } else if (nativeConversionCount > 0) {
+        alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF. Native export handled ${nativeConversionCount}; fallback handled ${fallbackConversionCount}.`);
+      } else {
+        alert(`Successfully converted ${newPdfs.length} Word document(s) to PDF using the local fallback renderer.`);
+      }
     } catch (error) {
       console.error(error);
       const activeFileName = wordConversionProgress?.currentFileName ?? selected[0]?.name ?? 'selected Word document';

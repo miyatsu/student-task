@@ -16,6 +16,11 @@ import {
 } from "./src/server/compression.ts";
 import { readRuntimeConfig } from "./src/server/runtime-config.ts";
 import { extractLegacyWordHtml } from "./src/server/word-conversion.ts";
+import {
+  buildNativeWordPdfUnavailableMessage,
+  convertWordDocumentToPdf,
+  NativeWordPdfUnavailableError,
+} from "./src/server/word-pdf-native.ts";
 
 dotenv.config({ quiet: true });
 
@@ -65,6 +70,53 @@ async function startServer() {
       try {
         if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
       } catch (cleanupError) {}
+    }
+  });
+
+  app.post("/api/word/convert-pdf", upload.single("word"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "No Word file uploaded" });
+    }
+
+    const originalExtension = path.extname(req.file.originalname) || '.docx';
+    const inputPath = path.join(uploadDir, `${req.file.filename}${originalExtension}`);
+    const outputPath = path.join(uploadDir, `${req.file.filename}.pdf`);
+
+    try {
+      fs.renameSync(req.file.path, inputPath);
+
+      const backend = await convertWordDocumentToPdf(inputPath, outputPath);
+      const pdfBuffer = fs.readFileSync(outputPath);
+
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("X-Word-Pdf-Backend", backend);
+      res.send(pdfBuffer);
+    } catch (error) {
+      if (error instanceof NativeWordPdfUnavailableError) {
+        return res.status(503).json({
+          error: buildNativeWordPdfUnavailableMessage(),
+          code: error.code,
+          fallbackAvailable: true,
+        });
+      }
+
+      console.error("Native Word PDF conversion error:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : String(error),
+        code: 'native-conversion-failed',
+        fallbackAvailable: true,
+      });
+    } finally {
+      for (const targetPath of [req.file.path, inputPath, outputPath]) {
+        try {
+          if (fs.existsSync(targetPath)) {
+            fs.unlinkSync(targetPath);
+          }
+        } catch {
+          // Best-effort cleanup only.
+        }
+      }
     }
   });
 

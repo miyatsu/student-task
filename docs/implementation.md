@@ -50,7 +50,7 @@ export interface AppFile {
 这让 `App.tsx` 主要保留状态编排和 UI 交互流程，而把可单测的无副作用逻辑下沉到独立模块。
 
 ### 2.4 图片 / Word 转 PDF 进度反馈
-图片和 Word 的批量转 PDF 都仍然在 `[src/App.tsx](../src/App.tsx)` 中顺序执行，但现在额外维护了局部进度状态：已完成数量、总数量，以及当前正在处理的文件名。`ImageFilesSection` 与 `WordFilesSection` 通过共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)` 渲染同一套绿色进度卡片，同时提供环形百分比、横向进度条和 `x/y` 数字反馈。
+图片和 Word 的批量转 PDF 都仍然在 `[src/App.tsx](../src/App.tsx)` 中顺序执行，但现在额外维护了局部进度状态：已完成数量、总数量、当前正在处理的文件名，以及转换开始时间。`ImageFilesSection` 与 `WordFilesSection` 通过共享的 `[ConversionProgressCard](../src/features/files/components/ConversionProgressCard.tsx)` 渲染同一套绿色进度卡片，同时提供环形百分比、横向进度条、`x/y` 数字反馈；其中 Word 转 PDF 会基于开始时间持续显示已用时长，帮助用户估计剩余时间。
 
 这样做有两个直接收益：
 1. 用户在多文件转换时能确认任务没有卡死，而是在逐份推进。
