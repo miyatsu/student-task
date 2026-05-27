@@ -88,9 +88,10 @@ export default function HomeHero() {
           PDF, Word, and Images in One Local-First Workspace
         </h1>
 
-        <p className="mt-5 max-w-2xl text-base leading-8 text-slate-700 sm:text-lg">
-          Drop mixed files, organize them visually, convert or extract what you need, and export the result. Gemini stays off until you configure a key.
-        </p>
+        <div className="mt-5 max-w-2xl space-y-1 text-base leading-8 text-slate-700 sm:text-lg">
+          <p>Drop mixed files, organize them visually, convert or extract what you need, and export the result.</p>
+          <p>LLM stays off until you configure a key.</p>
+        </div>
 
         <p className="mt-8 text-sm text-slate-600">Supports PDF · DOCX · DOC · PNG · JPG</p>
       </div>
