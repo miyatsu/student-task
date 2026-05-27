@@ -167,15 +167,6 @@ export default function App() {
     }
   }, [processFiles]);
 
-  const handleUploadZoneKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
-    }
-
-    event.preventDefault();
-    openFilePicker();
-  }, [openFilePicker]);
-
   const removeFile = (id: string, type: AppFile['type']) => {
     if (type === 'pdf') {
       setPdfFiles(prev => removeAppFile(prev, id));
@@ -1089,21 +1080,16 @@ export default function App() {
             <div className="mt-4 sm:mt-5">
               <div
                 id="workspace-upload-panel"
-                role="button"
-                tabIndex={0}
-                aria-label="Upload files to your workspace"
-                className={`group relative flex min-h-[16rem] flex-col justify-center overflow-hidden rounded-[2rem] border border-dashed bg-white/90 px-6 py-10 text-center transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 sm:px-8 sm:py-12
+                className={`group relative mx-auto flex min-h-[12.5rem] max-w-[42rem] flex-col justify-center overflow-hidden rounded-[1.85rem] border bg-[radial-gradient(circle_at_top,rgba(219,234,254,0.55),rgba(255,255,255,0.94)_45%,rgba(250,250,250,0.94))] px-6 py-8 text-center transition-all duration-200 ease-in-out sm:px-8 sm:py-9
                   ${isDragging
-                    ? 'border-sky-300 bg-sky-50/65 shadow-lg shadow-sky-100/70'
-                    : 'border-slate-300 shadow-sm shadow-slate-200/60 hover:border-slate-400 hover:shadow-slate-200/80'
+                    ? 'border-sky-300 shadow-[0_20px_60px_-36px_rgba(14,165,233,0.35)]'
+                    : 'border-zinc-200 shadow-[0_18px_50px_-40px_rgba(24,24,27,0.24)] hover:border-zinc-300 hover:shadow-[0_22px_60px_-40px_rgba(24,24,27,0.28)]'
                   }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={openFilePicker}
-                onKeyDown={handleUploadZoneKeyDown}
               >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-sky-100/70 via-emerald-50/45 to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-sky-100/80 via-white/50 to-transparent" />
                 <input
                   type="file"
                   multiple
@@ -1113,8 +1099,8 @@ export default function App() {
                   onChange={handleFileInput}
                 />
 
-                <div className="relative mx-auto h-16 w-16 rounded-full bg-sky-100 text-sky-700 shadow-sm shadow-sky-100/80 flex items-center justify-center">
-                  <Upload className="h-8 w-8" />
+                <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-700 shadow-sm shadow-sky-100/80">
+                  <Upload className="h-7 w-7" />
                 </div>
                 <p className="relative mt-6 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Workspace Upload</p>
 
@@ -1126,9 +1112,16 @@ export default function App() {
                     ))}
                 </div>
 
-                <p className="relative mt-5 text-sm leading-7 text-zinc-500">
-                  Choose files from your device, or drag and drop them here.
-                </p>
+                <div className="relative mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={openFilePicker}
+                    className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  >
+                    Choose files
+                  </button>
+                  <p className="text-sm text-zinc-500">or drag and drop files here</p>
+                </div>
               </div>
             </div>
           </div>
