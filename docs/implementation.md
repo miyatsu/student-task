@@ -63,7 +63,7 @@ export interface AppFile {
 
 这里的关键约束是：只允许有一套上传逻辑。当前实现把这套逻辑完全收敛到右侧上传面板，统一复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。
 
-首屏下方追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。这样信息层级就被收敛成：产品价值 -> 真实上传入口 -> 三类能力说明。
+首屏下方追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。每张卡片都把更具识别度的文件图标放在左侧，把 `PDF workflow` / `Image workflow` / `Word workflow` 标题放到图标右侧，从而把摘要阅读路径收敛成“看图标 -> 看标题 -> 看描述”。这样信息层级就被收敛成：产品价值 -> 真实上传入口 -> 三类能力说明。
 
 ### 2.5 旧版 `.doc` 转 PDF 路径
 `mammoth` 的能力边界本质上是 `DOCX -> HTML`，因此旧版二进制 `.doc` 不能直接复用浏览器端转换链。当前实现的策略是按格式分流：
