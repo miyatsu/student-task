@@ -59,7 +59,7 @@ export interface AppFile {
 2. 如果某一个源文件报错，界面可以把失败文件名和底层错误一起暴露出来，而不是只显示一个模糊的通用提示。
 
 ### 2.4A 首页工作台入口整合
-首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中把它们组合成一个统一的首屏容器：左侧由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明、主 CTA 与 trust notes，右侧直接放置真实的 Workspace Upload 面板。
+首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中把它们组合成一个统一的首屏容器：左侧由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明、主 CTA 与 trust notes，并把 `Local-first by default` / `AI only when configured` trust pills 放到标题上方；右侧直接放置真实的 Workspace Upload 面板。
 
 这里的关键约束是：只允许有一套上传逻辑。为此，Hero 中的 **Choose files** 按钮和上传面板本身都复用 `App.tsx` 内同一个 `fileInputRef`、`handleFileInput()` 和 `processFiles()`，避免出现两个视觉上相似但行为不一致的入口。
 

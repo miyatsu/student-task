@@ -49,9 +49,16 @@ export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
   return (
     <header className="relative overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.12),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.82))] p-6 sm:p-8 lg:p-10">
       <div className="max-w-3xl">
-        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-3.5 py-1.5 text-sm font-medium text-slate-600 shadow-sm shadow-slate-200/50">
-          Local-first · AI optional
-        </span>
+        <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:items-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/75 px-3 py-1.5">
+            <Lock className="h-4 w-4 text-slate-500" />
+            Local-first by default
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/75 px-3 py-1.5">
+            <Sparkles className="h-4 w-4 text-slate-500" />
+            AI only when configured
+          </span>
+        </div>
 
         <h1 className="mt-6 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl lg:leading-[1.05]">
           Process PDFs, images, and Word files in one local-first workspace.
@@ -70,17 +77,6 @@ export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
             Choose files
           </button>
           <p className="text-sm text-slate-600">Supports PDF · DOCX · DOC · PNG · JPG</p>
-        </div>
-
-        <div className="mt-8 flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:items-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/75 px-3 py-1.5">
-            <Lock className="h-4 w-4 text-slate-500" />
-            Local-first by default
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/75 px-3 py-1.5">
-            <Sparkles className="h-4 w-4 text-slate-500" />
-            AI only when configured
-          </span>
         </div>
       </div>
     </header>
