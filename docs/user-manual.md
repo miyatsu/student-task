@@ -8,7 +8,7 @@
 
 ## 核心功能指南
 
-当前首页已经改为“工作台入口”结构：从上到下依次是产品价值说明、三张能力摘要卡片、以及实际的 Workspace Upload 面板。首页顶部直接展示 `Local-first by default` 与 `AI only when configured` 两个状态标签。当前首页只保留最下方上传面板这一个上传入口；面板里提供明确的 **Choose files** 按钮，同时继续支持拖拽上传。上传面板中的格式摘要已合并为 `PNG/JPG/JPEG`，而中间的三张能力卡片则采用“图标在左、标题在右”的摘要样式，方便快速扫读 PDF / Image / Word 三条工作流。
+当前首页已经改为“工作台入口”结构：从上到下依次是产品价值说明、三张能力摘要卡片、以及实际的 Workspace Upload 面板。首页顶部直接展示 `Local-first by default` 与 `AI only when configured` 两个状态标签，Hero 主标题文案为 `PDF, Word, and Images in One Local-First Workspace`。当前首页只保留最下方上传面板这一个上传入口；面板里提供明确的 **Choose files** 按钮，同时继续支持拖拽上传。上传面板中的格式摘要已合并为 `PNG/JPG/JPEG`，而中间的三张能力卡片则采用“图标在左、标题在右”的摘要样式，方便快速扫读 PDF / Image / Word 三条工作流。
 
 ### 1. 文件的导入、分类与操作
 - **导入文件**：直接拖拽各类文件到虚线框内，或点击上传。系统会自动把文件归档到“图片”、“PDF”或者“Word”栏目中。
