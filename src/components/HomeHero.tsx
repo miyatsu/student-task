@@ -24,7 +24,7 @@ interface HomeHeroProps {
 
 export function HomeCapabilityStrip() {
   return (
-    <section aria-labelledby="workspace-capabilities" className="mt-6">
+    <section aria-label="Workspace capabilities" className="mt-6">
       <div className="grid gap-4 md:grid-cols-3">
         {capabilities.map(({ icon: Icon, title, description }) => (
           <article
@@ -34,7 +34,7 @@ export function HomeCapabilityStrip() {
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-700">
               <Icon className="h-5 w-5" />
             </div>
-            <h2 id={title === 'PDF workflow' ? 'workspace-capabilities' : undefined} className="mt-4 text-base font-semibold text-slate-950">
+            <h2 className="mt-4 text-base font-semibold text-slate-950">
               {title}
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
