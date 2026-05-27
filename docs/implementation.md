@@ -65,7 +65,7 @@ export interface AppFile {
 
 最近一轮微调里，Workspace Upload 卡片恢复成了“说明文案 + 明确按钮 + 格式胶囊”的旧版结构，同时把图片格式摘要从分离的 `PNG`、`JPG` 合并成单个 `PNG/JPG/JPEG` 标签，减少视觉噪声。
 
-首屏中段追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。每张卡片都把更具识别度的文件图标放在左侧，把 `PDF workflow` / `Image workflow` / `Word workflow` 标题放到图标右侧，从而把摘要阅读路径收敛成“看图标 -> 看标题 -> 看描述”。当前信息层级被收敛成：产品价值 -> 三类能力说明 -> 真实上传入口。
+首屏中段追加了一个轻量 capability strip，用三张中性色卡片概括 PDF、Image、Word 三条工作流，替代之前 Hero 内部高密度的多组强调卡片。每张卡片都把更具识别度的文件图标放在左侧，把 `PDF Workflow` / `Image Workflow` / `Word Workflow` 标题放到图标右侧，从而把摘要阅读路径收敛成“看图标 -> 看标题 -> 看描述”。当前信息层级被收敛成：产品价值 -> 三类能力说明 -> 真实上传入口。
 
 ### 2.5 旧版 `.doc` 转 PDF 路径
 `mammoth` 的能力边界本质上是 `DOCX -> HTML`，因此旧版二进制 `.doc` 不能直接复用浏览器端转换链。当前实现的策略是按格式分流：

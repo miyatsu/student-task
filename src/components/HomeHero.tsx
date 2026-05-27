@@ -31,17 +31,17 @@ function ImageFileGlyph() {
 const capabilities = [
   {
     icon: PdfDocumentGlyph,
-    title: 'PDF workflow',
+    title: 'PDF Workflow',
     description: 'Merge, split, compress, extract pages, and export clean results.',
   },
   {
     icon: ImageFileGlyph,
-    title: 'Image workflow',
+    title: 'Image Workflow',
     description: 'Rotate, enhance, convert to PDF, or extract text when AI is enabled.',
   },
   {
     icon: WordDocumentGlyph,
-    title: 'Word workflow',
+    title: 'Word Workflow',
     description: 'Convert DOCX in-browser and handle legacy DOC through the local server path.',
   },
 ];
