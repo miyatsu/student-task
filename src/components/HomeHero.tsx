@@ -20,12 +20,7 @@ function WordDocumentGlyph() {
 }
 
 function ImageFileGlyph() {
-  return (
-    <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-emerald-600 shadow-sm shadow-slate-200/40">
-      <ImageIcon className="h-6 w-6" />
-      <span className="absolute bottom-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-white" />
-    </span>
-  );
+  return <DocumentGlyph label="IMG" toneClass="bg-emerald-50 text-emerald-700" />;
 }
 
 const capabilities = [
@@ -53,21 +48,25 @@ interface HomeHeroProps {
 export function HomeCapabilityStrip() {
   return (
     <section aria-label="Workspace capabilities">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="overflow-hidden rounded-[1.8rem] border border-zinc-200/80 bg-zinc-50/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+        <div className="grid divide-y divide-zinc-200/80 md:grid-cols-3 md:divide-x md:divide-y-0">
         {capabilities.map(({ icon: Icon, title, description }) => (
           <article
             key={title}
-            className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm shadow-slate-200/60"
+            className="flex items-start gap-4 px-5 py-5 sm:px-6"
           >
-            <div className="flex items-center gap-3">
+            <div className="shrink-0 pt-0.5">
               <Icon />
-              <h2 className="text-base font-semibold text-slate-950">
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-zinc-950">
                 {title}
               </h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">{description}</p>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
           </article>
         ))}
+        </div>
       </div>
     </section>
   );
