@@ -1127,15 +1127,22 @@ export default function App() {
                 </div>
 
                 <div className="relative mt-8 space-y-6">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm text-slate-500">Drag files onto this panel or click anywhere inside it to choose files.</p>
-                    <span className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-slate-200/60">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-slate-500">Drag files onto this panel or choose them directly.</p>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openFilePicker();
+                      }}
+                      className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    >
                       Choose files
-                    </span>
+                    </button>
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-sm text-slate-600">
-                    {['PDF', 'DOCX', 'DOC', 'PNG', 'JPG'].map((item) => (
+                    {['PDF', 'DOCX', 'DOC', 'PNG/JPG/JPEG'].map((item) => (
                       <span key={item} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm shadow-slate-200/40">
                         {item}
                       </span>
