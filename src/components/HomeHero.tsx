@@ -84,7 +84,7 @@ export default function HomeHero() {
           </span>
         </div>
 
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-5xl lg:leading-[1.05] xl:whitespace-nowrap">
+        <h1 className="mx-auto mt-6 max-w-full text-center text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl md:text-[1.45rem] md:leading-[1.12] md:whitespace-nowrap lg:text-[1.7rem] xl:text-[1.9rem] 2xl:text-[2.05rem]">
           PDF, Word, and Images in One Local-First Workspace
         </h1>
 
