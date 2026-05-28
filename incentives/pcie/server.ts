@@ -14,6 +14,8 @@ import {
   createCompressionJobId,
   resolvePdfCompressionSettings,
 } from "./src/server/compression.ts";
+import { isAiRequestError, runAiChatRequest } from "./src/server/ai.ts";
+import { isLocalOcrRequestError, runLocalImageOcrRequest } from "./src/server/local-ocr.ts";
 import { readRuntimeConfig } from "./src/server/runtime-config.ts";
 import { extractLegacyWordHtml } from "./src/server/word-conversion.ts";
 import {
@@ -38,6 +40,7 @@ async function startServer() {
   const app = express();
   const httpServer = createHttpServer(app);
   app.use(compression());
+  app.use(express.json({ limit: "25mb" }));
   const preferredPort = Number.parseInt(process.env.PORT || "3000", 10);
 
   // API routes FIRST
@@ -49,6 +52,39 @@ async function startServer() {
     res.setHeader("Cache-Control", "no-store");
     res.json(readRuntimeConfig());
   });
+
+  app.post("/api/ai/chat", async (req, res) => {
+    try {
+      const response = await runAiChatRequest(req.body);
+      res.setHeader("Cache-Control", "no-store");
+      res.json(response);
+    } catch (error) {
+      console.error("AI chat error:", error);
+      if (isAiRequestError(error)) {
+        return res.status(error.status).json({ error: error.message, code: error.code });
+      }
+
+      res.status(500).json({ error: "AI assistant request failed." });
+    }
+  });
+
+  const handleImageOcrRequest = async (req: express.Request, res: express.Response) => {
+    try {
+      const response = await runLocalImageOcrRequest(req.body);
+      res.setHeader("Cache-Control", "no-store");
+      res.json(response);
+    } catch (error) {
+      console.error("Image OCR error:", error);
+      if (isLocalOcrRequestError(error)) {
+        return res.status(error.status).json({ error: error.message, code: error.code });
+      }
+
+      res.status(500).json({ error: "Image OCR request failed." });
+    }
+  };
+
+  app.post("/api/ocr/image", handleImageOcrRequest);
+  app.post("/api/ai/ocr", handleImageOcrRequest);
 
   app.post("/api/word/extract-html", upload.single("word"), async (req, res) => {
     if (!req.file) {

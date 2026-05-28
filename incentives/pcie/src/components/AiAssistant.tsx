@@ -3,7 +3,13 @@ import { X, Send, Sparkles, Loader2, Bot, User } from 'lucide-react';
 import Markdown from 'react-markdown';
 import * as mammoth from 'mammoth';
 import type { AppFile } from '../features/files';
-import { createGeminiClient, geminiSetupGuideMarkdown, getGeminiApiKey, loadGeminiApiKey } from '../lib/gemini';
+import {
+  aiSetupGuideMarkdown,
+  getAiRuntimeConfig,
+  isAiConfigured,
+  loadAiRuntimeConfig,
+  requestAiAssistantReply,
+} from '../lib/ai';
 
 interface Message {
   role: 'user' | 'model';
@@ -16,7 +22,10 @@ interface AiAssistantProps {
 }
 
 export default function AiAssistant({ files, onClose }: AiAssistantProps) {
-  const [geminiConfigured, setGeminiConfigured] = useState<boolean | null>(() => getGeminiApiKey() ? true : null);
+  const [aiConfigured, setAiConfigured] = useState<boolean | null>(() => {
+    const runtimeConfig = getAiRuntimeConfig();
+    return runtimeConfig ? isAiConfigured(runtimeConfig) : null;
+  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -85,73 +94,28 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
     setIsStreaming(true);
 
     try {
-      const ai = await createGeminiClient();
-      if (!ai) {
-        setGeminiConfigured(false);
-        setMessages(prev => prev.length > 0 ? prev : [{ role: 'model', text: geminiSetupGuideMarkdown }]);
+      const runtimeConfig = await loadAiRuntimeConfig();
+      if (!isAiConfigured(runtimeConfig)) {
+        setAiConfigured(false);
+        setMessages(prev => prev.length > 0 ? prev : [{ role: 'model', text: aiSetupGuideMarkdown }]);
         return;
       }
 
-      setGeminiConfigured(true);
+      setAiConfigured(true);
 
       const fileData = await getFilesBase64();
-
-      let contents: any[] = [];
-      const fileParts = fileData.map(f => ({ inlineData: { data: f.data, mimeType: f.mimeType } }));
-      
-      if (isInitial) {
-        contents = [
-          {
-            role: 'user',
-            parts: [
-              ...fileParts,
-              { text }
-            ]
-          }
-        ];
-      } else {
-        contents = [
-          {
-            role: 'user',
-            parts: [
-              ...fileParts,
-              { text: "Here are the reference documents/images." }
-            ]
-          }
-        ];
-        
-        contents.push(...messages.map(m => ({
-          role: m.role,
-          parts: [{ text: m.text }]
-        })));
-        
-        contents.push({
-          role: 'user',
-          parts: [{ text }]
-        });
-      }
-
-      const responseStream = await ai.models.generateContentStream({
-        model: 'gemini-3.1-pro-preview',
-        contents,
+      const responseText = await requestAiAssistantReply({
+        prompt: text,
+        messages,
+        files: fileData,
       });
 
-      setMessages((prev) => [...prev, { role: 'model', text: '' }]);
-
-      for await (const chunk of responseStream) {
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          return [
-            ...prev.slice(0, -1),
-            { ...last, text: last.text + (chunk.text || '') }
-          ];
-        });
-      }
+      setMessages((prev) => [...prev, { role: 'model', text: responseText }]);
     } catch (error) {
       console.error('AI Error:', error);
       setMessages((prev) => [
         ...prev,
-        { role: 'model', text: 'Sorry, I encountered an error processing your request. Please try again.' }
+        { role: 'model', text: error instanceof Error ? error.message : 'AI assistant request failed.' }
       ]);
     } finally {
       setIsStreaming(false);
@@ -165,16 +129,16 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
     const initializeAssistant = async () => {
       setIsInitializing(true);
 
-      const apiKey = await loadGeminiApiKey();
+      const runtimeConfig = await loadAiRuntimeConfig();
       if (cancelled) {
         return;
       }
 
-      const configured = Boolean(apiKey);
-      setGeminiConfigured(configured);
+      const configured = isAiConfigured(runtimeConfig);
+      setAiConfigured(configured);
 
       if (!configured) {
-        setMessages([{ role: 'model', text: geminiSetupGuideMarkdown }]);
+        setMessages([{ role: 'model', text: aiSetupGuideMarkdown }]);
         setIsInitializing(false);
         return;
       }
@@ -183,7 +147,9 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
         ? `Please provide a brief summary of these ${files.length} documents/images.`
         : files[0].type === 'pdf' 
           ? "Please provide a brief summary of this PDF document." 
-          : "Please describe this image in detail.";
+          : files[0].type === 'word'
+            ? 'Please provide a brief summary of this Word document.'
+            : 'Please describe this image in detail.';
 
       await handleSend(initialPrompt, true);
     };
@@ -227,7 +193,7 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
             <div className="flex flex-col items-center justify-center h-full text-zinc-400 gap-4">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
               <p className="text-sm font-medium animate-pulse">
-                {geminiConfigured === null ? 'Checking Gemini configuration...' : `Analyzing document${files.length > 1 ? 's' : ''}...`}
+                {aiConfigured === null ? 'Checking AI configuration...' : `Analyzing document${files.length > 1 ? 's' : ''}...`}
               </p>
             </div>
           ) : (
@@ -284,17 +250,17 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={geminiConfigured === null
-                ? 'Checking Gemini configuration...'
-                : geminiConfigured
+                placeholder={aiConfigured === null
+                ? 'Checking AI configuration...'
+                : aiConfigured
                   ? `Ask a question about ${files.length > 1 ? 'these documents' : 'this document'}...`
-                  : 'Configure GEMINI_API_KEY to enable Gemini chat.'}
-              disabled={geminiConfigured !== true || isStreaming || isInitializing}
+                  : 'Configure at least one AI API key to enable the assistant.'}
+              disabled={aiConfigured !== true || isStreaming || isInitializing}
               className="w-full pl-5 pr-14 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:opacity-50 text-sm"
             />
             <button
               type="submit"
-              disabled={geminiConfigured !== true || !input.trim() || isStreaming || isInitializing}
+              disabled={aiConfigured !== true || !input.trim() || isStreaming || isInitializing}
               className="absolute right-2 p-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors"
             >
               <Send className="w-4 h-4" />
@@ -302,11 +268,11 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
           </form>
           <div className="text-center mt-3">
             <p className="text-[10px] text-zinc-400 font-medium tracking-wide uppercase">
-              {geminiConfigured === null
-                ? 'Checking Gemini setup'
-                : geminiConfigured
-                  ? 'Powered by Gemini 3.1 Pro'
-                  : 'Gemini disabled until GEMINI_API_KEY is configured'}
+              {aiConfigured === null
+                ? 'Checking AI setup'
+                : aiConfigured
+                  ? 'AI ready'
+                  : 'AI disabled until an API key is configured'}
             </p>
           </div>
         </div>

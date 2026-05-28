@@ -50,16 +50,104 @@ describe('server compression helpers', () => {
 });
 
 describe('runtime config helpers', () => {
-  it('returns the trimmed Gemini key from the environment', () => {
-    expect(readRuntimeConfig({ GEMINI_API_KEY: ' runtime-key ' })).toEqual({
-      geminiApiKey: 'runtime-key',
+  it('returns provider summaries instead of leaking raw API keys', () => {
+    expect(readRuntimeConfig(
+      { GEMINI_API_KEY: ' runtime-key ' },
+      {
+        readLocalImageOcrRuntime: () => ({
+          engine: 'PaddleOCR',
+          available: true,
+          offlineReady: true,
+          detail: 'ready',
+        }),
+      },
+    )).toEqual({
+      aiProviders: [
+        { id: 'gemini', label: 'Google Gemini', configured: true, supportsVision: true },
+        { id: 'openai', label: 'OpenAI / ChatGPT', configured: false, supportsVision: true },
+        { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
+      ],
+      localImageOcr: {
+        engine: 'PaddleOCR',
+        available: true,
+        offlineReady: true,
+        detail: 'ready',
+      },
     });
   });
 
-  it('returns an empty Gemini key when the environment value is missing', () => {
-    expect(readRuntimeConfig({ GEMINI_API_KEY: undefined })).toEqual({
-      geminiApiKey: '',
+  it('returns all providers as unconfigured when no key is present', () => {
+    expect(readRuntimeConfig(
+      { GEMINI_API_KEY: undefined, OPENAI_API_KEY: undefined, DEEPSEEK_API_KEY: undefined },
+      {
+        readLocalImageOcrRuntime: () => ({
+          engine: 'PaddleOCR',
+          available: false,
+          offlineReady: false,
+          detail: 'not ready',
+        }),
+      },
+    )).toEqual({
+      aiProviders: [
+        { id: 'gemini', label: 'Google Gemini', configured: false, supportsVision: true },
+        { id: 'openai', label: 'OpenAI / ChatGPT', configured: false, supportsVision: true },
+        { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
+      ],
+      localImageOcr: {
+        engine: 'PaddleOCR',
+        available: false,
+        offlineReady: false,
+        detail: 'not ready',
+      },
     });
+  });
+
+  it('reloads the process environment from .env when keys are added after the server starts', () => {
+    const originalGeminiApiKey = process.env.GEMINI_API_KEY;
+    const originalOpenAiKey = process.env.OPENAI_API_KEY;
+
+    try {
+      delete process.env.GEMINI_API_KEY;
+      delete process.env.OPENAI_API_KEY;
+      const loadProcessEnv = vi.fn(() => {
+        process.env.OPENAI_API_KEY = ' reloaded-openai-key ';
+      });
+
+      expect(readRuntimeConfig(process.env, {
+        loadProcessEnv,
+        readLocalImageOcrRuntime: () => ({
+          engine: 'PaddleOCR',
+          available: true,
+          offlineReady: true,
+          detail: 'ready',
+        }),
+      })).toEqual({
+        aiProviders: [
+          { id: 'gemini', label: 'Google Gemini', configured: false, supportsVision: true },
+          { id: 'openai', label: 'OpenAI / ChatGPT', configured: true, supportsVision: true },
+          { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
+        ],
+        localImageOcr: {
+          engine: 'PaddleOCR',
+          available: true,
+          offlineReady: true,
+          detail: 'ready',
+        },
+      });
+      expect(loadProcessEnv).toHaveBeenCalledTimes(1);
+    } finally {
+      if (originalGeminiApiKey === undefined) {
+        delete process.env.GEMINI_API_KEY;
+      } else {
+        process.env.GEMINI_API_KEY = originalGeminiApiKey;
+      }
+
+      if (originalOpenAiKey === undefined) {
+        delete process.env.OPENAI_API_KEY;
+      } else {
+        process.env.OPENAI_API_KEY = originalOpenAiKey;
+      }
+    }
   });
 });
 

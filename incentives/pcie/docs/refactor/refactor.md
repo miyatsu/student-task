@@ -1,4 +1,6 @@
-# Refactor Log
+# Refactor Archive
+
+本文档是工程重构档案，用于记录重构决策、取舍与验证结果，不作为系统当前行为的主说明文档。面向现状的产品、架构、实现与使用说明请分别参考 `README.md` 与 `docs/` 下的正式文档。
 
 ## 2026-05-25 · Iteration 1 · Extract Shared File Utilities
 
