@@ -1093,9 +1093,7 @@ export default function App() {
         <HomeHero />
 
         <section className="mt-6 rounded-[2.35rem] border border-[color:var(--home-surface-border)] bg-[var(--home-surface-bg)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),var(--home-soft-shadow)] sm:p-6 lg:p-8">
-          <HomeCapabilityStrip />
-
-          <div className="mt-5 sm:mt-6">
+          <div>
             <div
               id="workspace-upload-panel"
               className={`group relative mx-auto flex min-h-[13rem] max-w-[48rem] flex-col justify-center overflow-hidden rounded-[1.85rem] border bg-[radial-gradient(circle_at_top,rgba(223,235,243,0.7),rgba(255,255,255,0.96)_45%,rgba(249,245,240,0.94))] px-7 py-9 text-center transition-all duration-200 ease-in-out sm:px-9 sm:py-10
@@ -1141,6 +1139,10 @@ export default function App() {
                 <p className="text-sm text-zinc-500">or drag and drop files here</p>
               </div>
             </div>
+          </div>
+
+          <div className="mt-5 sm:mt-6">
+            <HomeCapabilityStrip />
           </div>
         </section>
 
