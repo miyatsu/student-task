@@ -50,29 +50,43 @@ describe('server compression helpers', () => {
 });
 
 describe('runtime config helpers', () => {
-  it('returns the trimmed Gemini key from the environment', () => {
+  it('returns provider summaries instead of leaking raw API keys', () => {
     expect(readRuntimeConfig({ GEMINI_API_KEY: ' runtime-key ' })).toEqual({
-      geminiApiKey: 'runtime-key',
+      aiProviders: [
+        { id: 'gemini', label: 'Google Gemini', configured: true, supportsVision: true },
+        { id: 'openai', label: 'OpenAI / ChatGPT', configured: false, supportsVision: true },
+        { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
+      ],
     });
   });
 
-  it('returns an empty Gemini key when the environment value is missing', () => {
-    expect(readRuntimeConfig({ GEMINI_API_KEY: undefined })).toEqual({
-      geminiApiKey: '',
+  it('returns all providers as unconfigured when no key is present', () => {
+    expect(readRuntimeConfig({ GEMINI_API_KEY: undefined, OPENAI_API_KEY: undefined, DEEPSEEK_API_KEY: undefined })).toEqual({
+      aiProviders: [
+        { id: 'gemini', label: 'Google Gemini', configured: false, supportsVision: true },
+        { id: 'openai', label: 'OpenAI / ChatGPT', configured: false, supportsVision: true },
+        { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
+      ],
     });
   });
 
-  it('reloads the process environment from .env when the running server started before the file existed', () => {
+  it('reloads the process environment from .env when keys are added after the server starts', () => {
     const originalGeminiApiKey = process.env.GEMINI_API_KEY;
+    const originalOpenAiKey = process.env.OPENAI_API_KEY;
 
     try {
       delete process.env.GEMINI_API_KEY;
+      delete process.env.OPENAI_API_KEY;
       const loadProcessEnv = vi.fn(() => {
-        process.env.GEMINI_API_KEY = ' reloaded-runtime-key ';
+        process.env.OPENAI_API_KEY = ' reloaded-openai-key ';
       });
 
       expect(readRuntimeConfig(process.env, { loadProcessEnv })).toEqual({
-        geminiApiKey: 'reloaded-runtime-key',
+        aiProviders: [
+          { id: 'gemini', label: 'Google Gemini', configured: false, supportsVision: true },
+          { id: 'openai', label: 'OpenAI / ChatGPT', configured: true, supportsVision: true },
+          { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
+        ],
       });
       expect(loadProcessEnv).toHaveBeenCalledTimes(1);
     } finally {
@@ -80,6 +94,12 @@ describe('runtime config helpers', () => {
         delete process.env.GEMINI_API_KEY;
       } else {
         process.env.GEMINI_API_KEY = originalGeminiApiKey;
+      }
+
+      if (originalOpenAiKey === undefined) {
+        delete process.env.OPENAI_API_KEY;
+      } else {
+        process.env.OPENAI_API_KEY = originalOpenAiKey;
       }
     }
   });

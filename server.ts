@@ -14,6 +14,7 @@ import {
   createCompressionJobId,
   resolvePdfCompressionSettings,
 } from "./src/server/compression.ts";
+import { isAiRequestError, runAiChatRequest, runAiOcrRequest } from "./src/server/ai.ts";
 import { readRuntimeConfig } from "./src/server/runtime-config.ts";
 import { extractLegacyWordHtml } from "./src/server/word-conversion.ts";
 import {
@@ -38,6 +39,7 @@ async function startServer() {
   const app = express();
   const httpServer = createHttpServer(app);
   app.use(compression());
+  app.use(express.json({ limit: "25mb" }));
   const preferredPort = Number.parseInt(process.env.PORT || "3000", 10);
 
   // API routes FIRST
@@ -48,6 +50,36 @@ async function startServer() {
   app.get("/api/runtime-config", (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.json(readRuntimeConfig());
+  });
+
+  app.post("/api/ai/chat", async (req, res) => {
+    try {
+      const response = await runAiChatRequest(req.body);
+      res.setHeader("Cache-Control", "no-store");
+      res.json(response);
+    } catch (error) {
+      console.error("AI chat error:", error);
+      if (isAiRequestError(error)) {
+        return res.status(error.status).json({ error: error.message, code: error.code });
+      }
+
+      res.status(500).json({ error: "AI assistant request failed." });
+    }
+  });
+
+  app.post("/api/ai/ocr", async (req, res) => {
+    try {
+      const response = await runAiOcrRequest(req.body);
+      res.setHeader("Cache-Control", "no-store");
+      res.json(response);
+    } catch (error) {
+      console.error("AI OCR error:", error);
+      if (isAiRequestError(error)) {
+        return res.status(error.status).json({ error: error.message, code: error.code });
+      }
+
+      res.status(500).json({ error: "AI OCR request failed." });
+    }
   });
 
   app.post("/api/word/extract-html", upload.single("word"), async (req, res) => {

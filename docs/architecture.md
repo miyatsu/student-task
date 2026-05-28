@@ -16,11 +16,11 @@
 - **Word 文档解析**: `mammoth` 用于前端 `DOCX -> HTML` 转换，`word-extractor` 用于服务端解析旧版 `.doc` 文档中的可读文本。
 - **机器视觉与 AI**: 
   - 通过 `@tensorflow/tfjs` 和 `upscaler`，实现本地推理解析，提升图片质感和细节。
-  - 依赖 `@google/genai` 完成基于云端大规模语言模型（LLM）的内容润色和查询。
+  - 通过服务端 AI gateway 对接云端大规模语言模型（LLM）：Gemini 通过 `@google/genai` 接入，OpenAI / DeepSeek 通过标准 HTTPS API 接入，并在服务端按顺序自动选择首个可用 provider。
 - **打包组装**: `jszip` 动态生成下载的压缩包；`browser-image-compression` 实现本地图片压缩。
 
 ### 1.3 后端核心（BFF / 轻代理）
-- 提供了一个基于 `express` 的轻量 API Node Server (`server.ts`)。当前实现使用进程内 `Map` 跟踪短生命周期作业状态，主要负责文件上传处理、PDF 压缩 / 转图、旧版 `.doc` 文本提取等任务编排，并通过 `/api/runtime-config` 在运行时把 `GEMINI_API_KEY` 从本机或云平台环境变量桥接给浏览器端 Gemini 客户端；开发模式下还会把 Vite 中间件与 HMR WebSocket 统一挂载到同一个 HTTP Server 上，并在默认端口被占用时自动回退到下一个可用端口。在核心文件交互（增删改查及画质增强）上仍保持“后端可选”的设计。
+- 提供了一个基于 `express` 的轻量 API Node Server (`server.ts`)。当前实现使用进程内 `Map` 跟踪短生命周期作业状态，主要负责文件上传处理、PDF 压缩 / 转图、旧版 `.doc` 文本提取，以及 `/api/ai/chat`、`/api/ai/ocr` 这类 AI gateway 任务编排；`/api/runtime-config` 只返回“哪些 AI provider 已配置”的运行时摘要，不再把原始第三方 API key 暴露给浏览器。开发模式下还会把 Vite 中间件与 HMR WebSocket 统一挂载到同一个 HTTP Server 上，并在默认端口被占用时自动回退到下一个可用端口。在核心文件交互（增删改查及画质增强）上仍保持“后端可选”的设计。
 
 ## 2. 核心架构与组件划分
 
@@ -45,7 +45,8 @@
 
 4. **轻量服务端辅助模块**
   - `src/server/compression.ts`：封装 PDF 压缩任务的参数拼装。
-  - `src/server/runtime-config.ts`：集中读取运行时 Gemini 配置。
+  - `src/server/runtime-config.ts`：集中读取运行时 AI provider 配置摘要。
+  - `src/server/ai.ts`：负责 AI provider 顺序回退、能力判断以及对话 / OCR gateway。
   - `src/server/word-conversion.ts`：使用 `word-extractor` 解析旧版 `.doc` 文件，并把可读文本包装成安全 HTML，供前端继续转 PDF。
 
 ## 3. 本地架构视图 
@@ -70,13 +71,13 @@ package "前端 (React + Vite + TailwindCSS)" {
   package "前端功能库" {
     [pdf-lib (PDF处理模块)] as PDFLib
     [upscaler + tfjs (本地推理大模型)] as TFJS
-    [@google/genai (Gemini AI API)] as GeminiAPI
     [browser-image-compression] as ImageCompression
   }
 }
 
 package "后端 (Express + TS)" {
   [server.ts (API服务 & 前端代理)] as Backend
+  [AI Gateway\nGemini / OpenAI / DeepSeek] as LLMGateway
 }
 
 App --> PdfEditor
@@ -86,10 +87,11 @@ App --> FilePreview
 
 PdfEditor --> PDFLib : PDF操作
 ImageEnhanceModal --> TFJS : 端侧图像增强
-AiAssistant --> GeminiAPI : 云端文档理解与对话
+AiAssistant --> Backend : AI 对话 / OCR 请求
 App --> ImageCompression : 本地图片压缩
 
 App <--> Backend : 可选 API 调用
+Backend --> LLMGateway : 顺序选择首个可用 provider
 Backend --> Backend : `.doc` 文本提取 / PDF 转图 / 压缩任务`
 @enduml
 ```

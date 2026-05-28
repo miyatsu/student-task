@@ -47,7 +47,7 @@ npm run build
 ```
 这一步会将所有的 React 组件、本地的 tfjs 流水线以及 CSS 打包到根目录下的 `dist/` 文件夹中。同时因为通过 esbuild 将相关 node runtime（`server.ts`）捆绑为能够利用的执行文件，随后可通过 `npm run start` 确认与线上等同的运行效果。
 
-当前前端构建还包含一层针对大依赖的收束策略：`PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 这些不属于首页首屏的工具入口会被 `React.lazy()` 拆成独立 chunk；`pdf-lib`、`jszip`、`mammoth`、`browser-image-compression`、Gemini helper 和部分浏览器端 fallback 依赖则会在运行时通过 `import()` 拉起。与此同时，Vite 会把 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`@tensorflow/*`、`upscaler` 等重依赖继续拆成单独的 vendor chunk，避免它们重新回流到首页主包。
+当前前端构建还包含一层针对大依赖的收束策略：`PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 这些不属于首页首屏的工具入口会被 `React.lazy()` 拆成独立 chunk；`pdf-lib`、`jszip`、`mammoth`、`browser-image-compression` 和部分浏览器端 fallback 依赖则会在运行时通过 `import()` 拉起。与此同时，Vite 会把 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`@tensorflow/*`、`upscaler` 等重依赖继续拆成单独的 vendor chunk，避免它们重新回流到首页主包。
 
 由于这些 chunk 大多只在 PDF 编辑、AI 增强、OCR / AI 对话或浏览器端 Word fallback 时才会下载，`vite.config.ts` 里的 `chunkSizeWarningLimit` 被调整为 `900`。如果未来 `npm run build` 再次出现 chunk 告警，优先判断它是否落在首页主入口；如果只是某个惰性工具块单独膨胀，再决定是继续拆包还是接受该功能的按需体积。
 
@@ -63,7 +63,7 @@ npm run preview
 npm run preview:static
 ```
 
-如果你要把应用部署到 Cloud Run、VPS、Docker 容器或其他云平台，Gemini Key 不需要在构建阶段硬编码到前端产物里。只要在运行平台配置好 `GEMINI_API_KEY`，`npm run start` 启动时的 `server.ts` 就会在运行时读取该环境变量并把它提供给浏览器端的 Gemini 客户端。
+如果你要把应用部署到 Cloud Run、VPS、Docker 容器或其他云平台，AI provider 的 API key 不需要在构建阶段硬编码到前端产物里。只要在运行平台配置好 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的一个或多个，`npm run start` 启动时的 `server.ts` 就会在服务端的 `/api/ai/*` gateway 中按顺序选择首个可用 provider。
 
 ## 5. 项目风格及代码提交
 在提交代码之前：
@@ -80,25 +80,31 @@ npm run preview:static
 - `winword.exe` 没有稳定的官方 headless PDF CLI；常见 Python 库 `docx2pdf` 在 Windows/macOS 上本质仍然依赖本地 Word 自动化，而 UNO / `unoconv` 一类方案本质仍然依赖 LibreOffice。因此这些 Python 或脚本方案被视为调用包装层，而不是新的独立默认导出链路。
 
 ## 6. 添加环境变量
-虽然前端代码绝大部分运行在客户端，但如果使用到了特定的云端功能（如 Gemini API 交互分析），则需要在项目根目录依据示例创建 `.env`文件配置后端参数。
+虽然前端代码绝大部分运行在客户端，但如果使用到了特定的云端能力（如 AI 对话或 OCR），则需要在项目根目录依据示例创建 `.env` 文件配置服务端参数。
 
-### 6.1 免费获取独立 Key
-你可以前往 Google AI Studio 开发者控制台免费申请一个专属的 Gemini API Key：
+### 6.1 获取 AI Provider Key
+当前支持的 AI provider 及默认尝试顺序为：`Gemini -> OpenAI / ChatGPT -> DeepSeek`。
 
-<https://aistudio.google.com/app/apikey>
+获取 Key 的入口如下：
 
-Gemini 的免费层级一般已经足够覆盖本项目的本地开发、功能演示与轻量公开部署测试。
+- Gemini：<https://aistudio.google.com/app/apikey>
+- OpenAI / ChatGPT：<https://platform.openai.com/api-keys>
+- DeepSeek：<https://platform.deepseek.com/api_keys>
 
-如果该项目来自 Google AI Studio 导出，请不要假设本地开发环境会自动继承 AI Studio 中的密钥注入。你需要在本机手动创建 `.env` 并填入可用的 `GEMINI_API_KEY`。
+你可以只配置一个 provider，也可以同时配置多个 key。若同时存在多个 key，服务端会按上述顺序依次尝试，自动使用第一个既可用又能处理当前任务的 provider。
 
-未配置 `GEMINI_API_KEY` 时，应用主界面仍会正常启动；只有 Gemini 聊天和基于 Gemini 的图片 OCR 会在界面内提示“未配置”并保持不可用，不会再导致整页白屏。
+如果该项目来自 Google AI Studio 导出，请不要假设本地开发环境会自动继承 AI Studio 中的密钥注入。你需要在本机手动创建 `.env` 并填入可用的 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的一个或多个。
+
+未配置任何 AI key 时，应用主界面仍会正常启动；只有 AI 助手和图片 OCR 会在界面内提示“未配置”并保持不可用，不会再导致整页白屏。
 
 ### 6.2 本地物理机运行
 在项目根目录新建 `.env` 文件（不要提交到 Git），填入：
 
 ```text
 # 示例：创建 .env
-GEMINI_API_KEY=your_actual_key_here
+GEMINI_API_KEY=your_gemini_key_here
+OPENAI_API_KEY=your_openai_key_here
+DEEPSEEK_API_KEY=your_deepseek_key_here
 ```
 
 随后执行：
@@ -107,25 +113,27 @@ GEMINI_API_KEY=your_actual_key_here
 npm run dev
 ```
 
-如果你是在 `npm run dev` 已经运行之后才新建 `.env`，不必为了 Gemini 单独重启整套服务。当前运行时配置接口会在下一次 AI 请求时补读项目根目录的 `.env`；刷新页面或重新打开 AI 助手 / 图片 OCR 即可。
+如果你是在 `npm run dev` 已经运行之后才新建 `.env`，不必为了 AI 单独重启整套服务。当前运行时配置接口会在下一次 AI 请求时补读项目根目录的 `.env`；刷新页面或重新打开 AI 助手 / 图片 OCR 即可。
 
 ### 6.3 云服务器 / 云平台运行
 对于 Cloud Run、VPS、Docker / 容器平台等独立部署环境，无需修改项目代码。只需要在平台提供的“环境变量 (Environment Variables)”配置面板中新增：
 
 ```text
-GEMINI_API_KEY=your_actual_key_here
+GEMINI_API_KEY=your_gemini_key_here
+OPENAI_API_KEY=your_openai_key_here
+DEEPSEEK_API_KEY=your_deepseek_key_here
 ```
 
-之后在部署流程中执行构建，并在运行阶段通过 `npm run start` 启动。`server.ts` 会在运行时读取该环境变量并让前端 Gemini 对话与 OCR 能力正常工作。
+之后在部署流程中执行构建，并在运行阶段通过 `npm run start` 启动。`server.ts` 会在运行时读取这些环境变量，并通过服务端 `/api/ai/chat` 与 `/api/ai/ocr` gateway 让前端 AI 对话与 OCR 能力正常工作，而不是把原始 key 注入浏览器。
 
-### 6.4 Gemini 故障分型与排查
+### 6.4 AI 故障分型与排查
 如果 AI 助手或图片 OCR 失败，当前界面会优先给出更具体的分类，而不是统一提示“请重试”。可以按下面的顺序排查：
 
-1. 如果提示 API key 被拒绝，请先检查 `.env` 或云端环境变量中的 `GEMINI_API_KEY` 是否填错、过期或权限不足。
-2. 如果提示配额或速率限制，请等待一段时间后重试，并检查该 Key 在 Google AI Studio / Google AI 控制台中的额度。
-3. 如果提示无法连接 `generativelanguage.googleapis.com:443`，说明问题在网络链路而不是前端功能实现；请检查本机或部署环境的防火墙、代理、VPN、DNS 和区域访问限制。
-4. 如果提示模型不可用，请检查当前 SDK、Key 权限和区域是否支持所请求的 Gemini 模型。
-5. 如果提示请求参数被拒绝，请优先检查提交给 Gemini 的文件内容或请求结构，而不是先怀疑 `.env`。
+1. 如果提示 API key 被拒绝，请先检查 `.env` 或云端环境变量中的已配置 key 是否填错、过期或权限不足。
+2. 如果提示配额或速率限制，请等待一段时间后重试，并检查对应 provider 账号的用量额度。
+3. 如果提示 AI provider 网络不可达，说明问题在网络链路而不是前端功能实现；请检查本机或部署环境的防火墙、代理、VPN、DNS 和区域访问限制。
+4. 如果提示模型不可用，请检查当前 provider 账号、区域和默认模型访问权限是否支持该能力。
+5. 如果提示请求参数被拒绝，请优先检查提交给 AI 的文件内容或请求结构，而不是先怀疑 `.env`。
 
 > 请特别注意：绝不要把包括 `.env` 在内的含有私人身份和计费 Key 的属性混入 Git 代码库。
 

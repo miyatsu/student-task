@@ -37,17 +37,19 @@
 - 在里面您可以自由删除不需要的页面，也可以从外部提取部分页面或全部合并产生新的 PDF 文档。
 - 本系统使用本地级 [PDF-lib](./architecture.md#frontend-tech) 完成此类计算。
 
-### 5. 万能的智能助手 (Gemini AI Chat)
+### 5. 万能的智能助手（AI Chat）
 - 勾选任意多个文件（可跨越 PDF，文字等类型），点击右下角悬浮棒或者工具栏的 **AI 助手**。
 - 您随时可以像往常和人类交流一样，向助手询问这些被选中文件的相关知识，或让它帮忙总结、翻译和分析。
-- 如果你是在本地开发环境中运行该项目，而不是在 Google AI Studio 的托管环境里，请先前往 <https://aistudio.google.com/app/apikey> 申请独立的 Gemini API Key，再在项目根目录配置 `.env` 中的 `GEMINI_API_KEY`。未配置时，助手窗口会直接提示如何启用 Gemini，而不会让整个页面失效。
+- 如果你在本地开发环境中运行该项目，请先在项目根目录的 `.env` 里配置至少一个 AI key：`GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY`。获取入口分别为 Google AI Studio <https://aistudio.google.com/app/apikey>、OpenAI Platform <https://platform.openai.com/api-keys>、DeepSeek Platform <https://platform.deepseek.com/api_keys>。
+- 如果同时配置了多个 key，系统会按默认顺序 `Gemini -> OpenAI / ChatGPT -> DeepSeek` 自动尝试，并使用第一个可完成当前任务的 provider；界面本身不需要你手动切换底层模型。
 - 如果你是在开发服务器已经运行后才新建 `.env`，刷新页面或重新打开 AI 助手即可；当前运行时配置会在下一次请求时补读 `.env`，不用专门重启整套应用。
-- 如果 AI 助手报的是“API key 被拒绝”，那是密钥配置问题；如果报的是“无法连接 `generativelanguage.googleapis.com:443`”，那是网络或出口访问问题；如果报的是“模型不可用”或“配额不足”，则应分别检查模型权限与额度，而不是盲目重复重试。
+- 如果 AI 助手报的是“API key 被拒绝”，那是密钥配置问题；如果报的是“AI provider 网络不可达”，那是网络或出口访问问题；如果报的是“模型不可用”或“配额不足”，则应分别检查模型权限与额度，而不是盲目重复重试。
 
-### 6. 图片文字提取（Gemini OCR）
+### 6. 图片文字提取（AI OCR）
 - 在图片条目上点击“扫描文字”按钮，可以把图片中的文本提取为 Markdown 文件下载到本地。
-- 该能力同样依赖 `GEMINI_API_KEY`。如果本地未配置密钥，界面会弹出提示，引导你先去 Google AI Studio 申请 Key 并完成环境变量配置。
-- OCR 失败时，弹窗也会直接提示更具体的原因，例如 API key、网络、配额或模型问题，便于区分到底是配置故障还是 Gemini 服务链路异常。
+- 该能力同样依赖 AI key。如果本地未配置 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的任何一个，界面会弹出提示，引导你先配置可用 key。
+- 当前图片 OCR 会自动尝试支持图像分析的 provider；如果只配置了文本型 provider，系统会明确提示你需要补充支持图片分析的 AI key，而不是静默失败。
+- OCR 失败时，弹窗也会直接提示更具体的原因，例如 API key、网络、配额或模型问题，便于区分到底是配置故障还是 AI 服务链路异常。
 
 ### 7. 图片批量转 PDF 进度反馈
 - 当你一次选择多张图片并点击 **Convert to PDF** 后，图片区块底部会显示一张绿色进度卡片。

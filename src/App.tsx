@@ -35,7 +35,7 @@ const loadJsZip = async () => (await import('jszip')).default;
 const loadImageCompression = async () => (await import('browser-image-compression')).default;
 const loadMammoth = () => import('mammoth');
 const loadHtml2Pdf = async () => (await import('html2pdf.js')).default;
-const loadGeminiHelpers = () => import('./lib/gemini');
+const loadAiHelpers = () => import('./lib/ai');
 
 type NativeWordPdfBackend = 'libreoffice-cli' | 'word-com';
 type WordConversionMethod = NativeWordPdfBackend | 'html-fallback';
@@ -922,10 +922,10 @@ export default function App() {
   const handleExtractText = async (appFile: AppFile) => {
     setExtractingTextId(appFile.id);
     try {
-      const { buildGeminiErrorMessage, createGeminiClient, geminiSetupGuideText } = await loadGeminiHelpers();
-      const ai = await createGeminiClient();
-      if (!ai) {
-        alert(geminiSetupGuideText);
+      const { aiSetupGuideText, extractImageTextWithAi, isAiConfigured, loadAiRuntimeConfig } = await loadAiHelpers();
+      const runtimeConfig = await loadAiRuntimeConfig();
+      if (!isAiConfigured(runtimeConfig)) {
+        alert(aiSetupGuideText);
         return;
       }
 
@@ -936,20 +936,11 @@ export default function App() {
         reader.onerror = reject;
       });
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { inlineData: { data: base64, mimeType: appFile.file.type } },
-              { text: 'Extract all text from this image. Output ONLY the extracted text in Markdown format. Do not include any conversational filler, explanations, or markdown code blocks around the entire output.' }
-            ]
-          }
-        ]
+      const text = await extractImageTextWithAi({
+        data: base64,
+        mimeType: appFile.file.type,
+        name: appFile.name,
       });
-
-      const text = response.text || '';
       
       const blob = new Blob([text], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
@@ -962,8 +953,7 @@ export default function App() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error extracting text:', error);
-      const { buildGeminiErrorMessage } = await loadGeminiHelpers();
-      alert(buildGeminiErrorMessage(error, 'Gemini OCR'));
+      alert(error instanceof Error ? error.message : 'AI OCR failed.');
     } finally {
       setExtractingTextId(null);
     }
@@ -1076,7 +1066,7 @@ export default function App() {
 
   const totalSelected = selectedPdfIds.size + selectedImageIds.size + selectedWordIds.size;
 
-  const openAiAssistant = (files: AppFile[]) => {
+  const openAssistant = (files: AppFile[]) => {
     setAiAssistantFiles(files);
   };
 
@@ -1175,7 +1165,7 @@ export default function App() {
               onDuplicate={(file) => duplicateFile(file, 'image')}
               onRotate={rotateImage}
               onEnhance={openEnhanceModal}
-              onAskAi={openAiAssistant}
+              onAskAi={openAssistant}
               onExtractText={handleExtractText}
               extractingTextId={extractingTextId}
               onRemove={(id) => removeFile(id, 'image')}
@@ -1203,7 +1193,7 @@ export default function App() {
               onMove={(id, direction) => moveFile('pdf', id, direction)}
               onOpenPreview={openPreview}
               onDuplicate={(file) => duplicateFile(file, 'pdf')}
-              onAskAi={openAiAssistant}
+              onAskAi={openAssistant}
               onExtractImages={handleExtractImages}
               extractingImagesId={extractingImagesId}
               onConvertToVector={handleConvertToVector}
@@ -1233,7 +1223,7 @@ export default function App() {
               onMove={(id, direction) => moveFile('word', id, direction)}
               onOpenPreview={openPreview}
               onDuplicate={(file) => duplicateFile(file, 'word')}
-              onAskAi={openAiAssistant}
+              onAskAi={openAssistant}
               onRemove={(id) => removeFile(id, 'word')}
               onDeleteSelected={deleteSelectedWords}
               onConvertSelected={convertSelectedWords}
