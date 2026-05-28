@@ -6,9 +6,15 @@
 
 本系统强调几件事：**同屏整理、本地优先、按需 AI、一步导出**。大部分文件处理都直接发生在浏览器里，尽量减少对外部服务的依赖。
 
+为了让后续的操作说明和界面位置更容易对上，先看一眼当前首页的初始状态：
+
+![首页初始状态截图](./assets/homepage-initial-state.png)
+
+这张图展示的是用户第一次进入工作区时看到的首屏结构：顶部 Hero 负责说明 `Local-first by default` 与 `AI only when configured` 这两个核心前提；中段 `Workspace Upload` 面板承接实际的文件导入动作；底部 capability strip 再用 PDF、Image、Word 三条 workflow 概括后续能力。后文提到的首页说明、上传入口和功能区位置，都以这张首页初始状态图为参照。
+
 ## 核心功能指南
 
-当前首页已经改为“工作台入口”结构：从上到下依次是产品价值说明、实际的 Workspace Upload 面板，以及三张能力摘要卡片；此前包住这三段内容的最外层首屏外壳已经被移除，页面现在改成更宽的版心里直接放置顶部 Hero 与下方共享工作区两大区块，因此视觉上比之前更舒展，也少了一层套一层的边框。首页顶部直接展示 `Local-first by default` 与 `AI only when configured` 两个状态标签；Hero 区现在只保留状态标签、单行主标题和两句 supporting copy，不再在上半区重复放置 `Choose files` 按钮。主标题仍是 `PDF, Word, and Images in One Local-First Workspace`，但在放宽布局后会以更大的字号和更柔和的浅蓝色稳定保持单行显示，不再在右侧被截断；两句说明文字也被统一到相同字号，同时继续控制为单行显示。说明文字第二句仍为 `LLM stays off until you configure a key.`，同时第一句末尾的 `and export the result.` 会保持为连续短语，不再单独掉到下一行。当前首页只保留中段上传面板这一个上传入口；上传卡片现在被收窄成更紧凑的上传区，保留上传图标、`Workspace Upload` 标签和格式胶囊，并用明确的 **Choose files** 按钮作为主操作，把拖拽方式降为次级提示 `or drag and drop files here`。格式胶囊当前显示为 `PDF`、`DOC / DOCX`、`PNG / JPG / JPEG`；而最下方的能力区则进一步收束为一条共享 ribbon，三项标题分别为 `PDF Workflow`、`Image Workflow`、`Word Workflow`，并统一使用同一套文件徽章风格。最终样式又统一到了更暖的中性色背景、成熟一些的阴影层级、柔和的蓝色标题与按钮强调色，以及本地优先的 sans 字体栈。
+当前首页已经改为“工作台入口”结构：从上到下依次是产品价值说明、实际的 Workspace Upload 面板，以及三张能力摘要卡片；此前包住这三段内容的最外层首屏外壳已经被移除，页面现在改成更宽的版心里直接放置顶部 Hero 与下方共享工作区两大区块，因此视觉上比之前更舒展，也少了一层套一层的边框。结合上面的首页初始状态图来看，首页顶部现在直接展示 `Local-first by default` 与 `AI only when configured` 两个状态标签；Hero 区只保留状态标签、单行主标题和两句 supporting copy，不再在上半区重复放置 `Choose files` 按钮。主标题仍是 `PDF, Word, and Images in One Local-First Workspace`，并以更大的字号和更柔和的浅蓝色稳定保持单行显示；两句说明文字也被统一到相同字号，同时继续控制为单行展示。当前首页只保留中段上传面板这一个上传入口；上传卡片保留上传图标、`Workspace Upload` 标签和格式胶囊，并用明确的 **Choose files** 按钮作为主操作，把拖拽方式降为次级提示 `or drag and drop files here`。格式胶囊当前显示为 `PDF`、`DOC / DOCX`、`PNG / JPG / JPEG`；而最下方的能力区则进一步收束为一条共享 ribbon，三项标题分别为 `PDF Workflow`、`Image Workflow`、`Word Workflow`，并统一使用同一套文件徽章风格。最终样式也统一到了更暖的中性色背景、成熟一些的阴影层级、柔和的蓝色标题与按钮强调色，以及本地优先的 sans 字体栈。
 
 ### 1. 文件的导入、分类与操作
 - **导入文件**：直接拖拽各类文件到虚线框内，或点击上传。系统会自动把文件归档到“图片”、“PDF”或者“Word”栏目中。
