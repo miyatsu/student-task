@@ -20,6 +20,7 @@ pnpm-debug.log*
 .vscode/
 .sixth/
 .local/
+__pycache__/
 
 .DS_Store
 Thumbs.db
