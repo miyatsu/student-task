@@ -1089,60 +1089,60 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--home-page-bg)] text-slate-950 font-sans selection:bg-stone-200 selection:text-slate-950 pb-32">
-      <div className="mx-auto max-w-6xl px-6 py-12 lg:px-8 lg:py-16">
-        <section className="space-y-4 rounded-[2.75rem] border border-[color:var(--home-shell-border)] bg-[var(--home-shell-bg)] p-3 shadow-[var(--home-shell-shadow)] sm:p-4 lg:p-5">
-          <HomeHero onChooseFiles={openFilePicker} />
+      <div className="mx-auto max-w-[88rem] px-5 py-12 sm:px-6 lg:px-10 lg:py-16">
+        <HomeHero />
 
-          <div className="rounded-[2.15rem] border border-[color:var(--home-surface-border)] bg-[var(--home-surface-bg)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),var(--home-soft-shadow)] sm:p-5 lg:p-6">
-            <HomeCapabilityStrip />
+        <section className="mt-6 rounded-[2.35rem] border border-[color:var(--home-surface-border)] bg-[var(--home-surface-bg)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),var(--home-soft-shadow)] sm:p-6 lg:p-8">
+          <div>
+            <div
+              id="workspace-upload-panel"
+              className={`group relative mx-auto flex min-h-[13rem] max-w-[48rem] flex-col justify-center overflow-hidden rounded-[1.85rem] border bg-[radial-gradient(circle_at_top,rgba(223,235,243,0.7),rgba(255,255,255,0.96)_45%,rgba(249,245,240,0.94))] px-7 py-9 text-center transition-all duration-200 ease-in-out sm:px-9 sm:py-10
+                ${isDragging
+                  ? 'border-sky-300 shadow-[0_20px_60px_-36px_rgba(14,165,233,0.35)]'
+                  : 'border-[color:var(--home-surface-border)] shadow-[var(--home-card-shadow)] hover:border-zinc-300 hover:shadow-[var(--home-soft-shadow)]'
+                }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/70 via-white/35 to-transparent" />
+              <input
+                type="file"
+                multiple
+                accept="application/pdf,image/png,image/jpeg,image/jpg,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={handleFileInput}
+              />
 
-            <div className="mt-4 sm:mt-5">
-              <div
-                id="workspace-upload-panel"
-                className={`group relative mx-auto flex min-h-[12.5rem] max-w-[42rem] flex-col justify-center overflow-hidden rounded-[1.85rem] border bg-[radial-gradient(circle_at_top,rgba(223,235,243,0.7),rgba(255,255,255,0.96)_45%,rgba(249,245,240,0.94))] px-6 py-8 text-center transition-all duration-200 ease-in-out sm:px-8 sm:py-9
-                  ${isDragging
-                    ? 'border-sky-300 shadow-[0_20px_60px_-36px_rgba(14,165,233,0.35)]'
-                    : 'border-[color:var(--home-surface-border)] shadow-[var(--home-card-shadow)] hover:border-zinc-300 hover:shadow-[var(--home-soft-shadow)]'
-                  }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/70 via-white/35 to-transparent" />
-                <input
-                  type="file"
-                  multiple
-                  accept="application/pdf,image/png,image/jpeg,image/jpg,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleFileInput}
-                />
+              <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--home-accent-soft)] text-[var(--home-accent)] shadow-sm shadow-white/80">
+                <Upload className="h-7 w-7" />
+              </div>
+              <p className="relative mt-6 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Workspace Upload</p>
 
-                <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--home-accent-soft)] text-[var(--home-accent)] shadow-sm shadow-white/80">
-                  <Upload className="h-7 w-7" />
-                </div>
-                <p className="relative mt-6 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Workspace Upload</p>
+              <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-zinc-500">
+                  {['PDF', 'DOC / DOCX', 'PNG / JPG / JPEG'].map((item) => (
+                    <span key={item} className="rounded-full border border-zinc-200 bg-white/85 px-3 py-1.5">
+                      {item}
+                    </span>
+                  ))}
+              </div>
 
-                <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-zinc-500">
-                    {['PDF', 'DOC / DOCX', 'PNG', 'JPG / JPEG'].map((item) => (
-                      <span key={item} className="rounded-full border border-zinc-200 bg-white/85 px-3 py-1.5">
-                        {item}
-                      </span>
-                    ))}
-                </div>
-
-                <div className="relative mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={openFilePicker}
-                    className="inline-flex items-center justify-center rounded-full bg-[var(--home-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--home-card-shadow)] transition-colors hover:bg-[var(--home-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--home-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                  >
-                    Choose files
-                  </button>
-                  <p className="text-sm text-zinc-500">or drag and drop files here</p>
-                </div>
+              <div className="relative mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={openFilePicker}
+                  className="inline-flex items-center justify-center rounded-full bg-[var(--home-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--home-card-shadow)] transition-colors hover:bg-[var(--home-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--home-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  Choose files
+                </button>
+                <p className="text-sm text-zinc-500">or drag and drop files here</p>
               </div>
             </div>
+          </div>
+
+          <div className="mt-5 sm:mt-6">
+            <HomeCapabilityStrip />
           </div>
         </section>
 
