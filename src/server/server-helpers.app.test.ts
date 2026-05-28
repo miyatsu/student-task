@@ -61,6 +61,28 @@ describe('runtime config helpers', () => {
       geminiApiKey: '',
     });
   });
+
+  it('reloads the process environment from .env when the running server started before the file existed', () => {
+    const originalGeminiApiKey = process.env.GEMINI_API_KEY;
+
+    try {
+      delete process.env.GEMINI_API_KEY;
+      const loadProcessEnv = vi.fn(() => {
+        process.env.GEMINI_API_KEY = ' reloaded-runtime-key ';
+      });
+
+      expect(readRuntimeConfig(process.env, { loadProcessEnv })).toEqual({
+        geminiApiKey: 'reloaded-runtime-key',
+      });
+      expect(loadProcessEnv).toHaveBeenCalledTimes(1);
+    } finally {
+      if (originalGeminiApiKey === undefined) {
+        delete process.env.GEMINI_API_KEY;
+      } else {
+        process.env.GEMINI_API_KEY = originalGeminiApiKey;
+      }
+    }
+  });
 });
 
 describe('word conversion helpers', () => {

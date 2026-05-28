@@ -922,7 +922,7 @@ export default function App() {
   const handleExtractText = async (appFile: AppFile) => {
     setExtractingTextId(appFile.id);
     try {
-      const { createGeminiClient, geminiSetupGuideText } = await loadGeminiHelpers();
+      const { buildGeminiErrorMessage, createGeminiClient, geminiSetupGuideText } = await loadGeminiHelpers();
       const ai = await createGeminiClient();
       if (!ai) {
         alert(geminiSetupGuideText);
@@ -962,7 +962,8 @@ export default function App() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error extracting text:', error);
-      alert('Failed to extract text. Please try again.');
+      const { buildGeminiErrorMessage } = await loadGeminiHelpers();
+      alert(buildGeminiErrorMessage(error, 'Gemini OCR'));
     } finally {
       setExtractingTextId(null);
     }

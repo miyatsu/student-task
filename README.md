@@ -70,7 +70,9 @@ Word 转 PDF 继续遵循 local-first：`DOCX` 在浏览器内直接转 HTML 并
 Gemini Key 配置速览：
 - 免费独立 Key 可在 Google AI Studio 开发者控制台申请：<https://aistudio.google.com/app/apikey>。免费层通常足够覆盖本地试用或轻量公开演示。
 - 本地运行时，在项目根目录创建 `.env` 并写入 `GEMINI_API_KEY=你的专属 API Key`，然后执行 `npm run dev`。
+- 如果 `npm run dev` 已经先启动、随后才补建 `.env`，当前 `/api/runtime-config` 会在下次 AI 请求时重新读取该文件；刷新页面或重新打开 AI 助手 / OCR 即可，无需因为这一个配置再重启整套前端。
 - 云端部署时，无需改代码；只需在平台环境变量里设置 `GEMINI_API_KEY`。构建完成后，`npm run start` 启动的 `server.ts` 会在运行时读取该值并提供给浏览器端 AI 功能。
+- Gemini 相关报错现在会尽量区分成“API key 被拒绝”“配额/速率限制”“无法连到 `generativelanguage.googleapis.com:443` 的网络问题”“模型不可用”或“请求参数不合法”，便于直接判断是配置、网络还是调用层问题。
 
 ---
 *本项目不强制绑定远端的云端数据库或者依赖云侧持久化存储，核心在于使用浏览器内置机能（`tf.js`, Web Workers 等）保护您的重要事务文档数据安全。*

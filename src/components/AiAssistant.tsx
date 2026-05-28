@@ -3,7 +3,13 @@ import { X, Send, Sparkles, Loader2, Bot, User } from 'lucide-react';
 import Markdown from 'react-markdown';
 import * as mammoth from 'mammoth';
 import type { AppFile } from '../features/files';
-import { createGeminiClient, geminiSetupGuideMarkdown, getGeminiApiKey, loadGeminiApiKey } from '../lib/gemini';
+import {
+  buildGeminiErrorMessage,
+  createGeminiClient,
+  geminiSetupGuideMarkdown,
+  getGeminiApiKey,
+  loadGeminiApiKey,
+} from '../lib/gemini';
 
 interface Message {
   role: 'user' | 'model';
@@ -151,7 +157,7 @@ export default function AiAssistant({ files, onClose }: AiAssistantProps) {
       console.error('AI Error:', error);
       setMessages((prev) => [
         ...prev,
-        { role: 'model', text: 'Sorry, I encountered an error processing your request. Please try again.' }
+        { role: 'model', text: buildGeminiErrorMessage(error, 'Gemini chat') }
       ]);
     } finally {
       setIsStreaming(false);

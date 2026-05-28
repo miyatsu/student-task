@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 
 const buildTimeGeminiApiKey = process.env.GEMINI_API_KEY?.trim() || '';
 
-let cachedGeminiApiKey: string | null | undefined;
+let cachedGeminiApiKey: string | undefined;
 let geminiApiKeyPromise: Promise<string> | null = null;
 
 export const geminiSetupGuideMarkdown = `### Need a Gemini API key?
@@ -53,6 +53,101 @@ function normalizeGeminiApiKey(apiKey?: string | null) {
   return apiKey?.trim() || '';
 }
 
+function readGeminiErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const cause = error.cause;
+    const causeMessage = cause instanceof Error
+      ? cause.message
+      : typeof cause === 'string'
+        ? cause
+        : '';
+
+    return [error.message, causeMessage].filter(Boolean).join(' | ');
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+
+  return String(error);
+}
+
+function readGeminiErrorStatus(error: unknown) {
+  if (!error || typeof error !== 'object' || !('status' in error)) {
+    return undefined;
+  }
+
+  return typeof error.status === 'number' ? error.status : undefined;
+}
+
+export function buildGeminiErrorMessage(error: unknown, actionLabel = 'Gemini request') {
+  const rawMessage = readGeminiErrorMessage(error).trim();
+  const normalizedMessage = rawMessage.toLowerCase();
+  const status = readGeminiErrorStatus(error);
+  const rawDetail = rawMessage ? ` Raw error: ${rawMessage}` : '';
+
+  if (
+    status === 401
+    || status === 403
+    || normalizedMessage.includes('api key')
+    || normalizedMessage.includes('unauthorized')
+    || normalizedMessage.includes('permission denied')
+    || normalizedMessage.includes('authentication')
+  ) {
+    return `${actionLabel} failed because Gemini rejected the API key or this key does not have access. Check GEMINI_API_KEY in .env or your deployment environment, then try again.${rawDetail}`;
+  }
+
+  if (
+    status === 429
+    || normalizedMessage.includes('quota')
+    || normalizedMessage.includes('rate limit')
+    || normalizedMessage.includes('resource has been exhausted')
+  ) {
+    return `${actionLabel} failed because the Gemini API quota or rate limit was exceeded. Wait a moment and verify the quota for this key before retrying.${rawDetail}`;
+  }
+
+  if (
+    normalizedMessage.includes('fetch failed')
+    || normalizedMessage.includes('failed to fetch')
+    || normalizedMessage.includes('network')
+    || normalizedMessage.includes('enotfound')
+    || normalizedMessage.includes('econnrefused')
+    || normalizedMessage.includes('timed out')
+    || normalizedMessage.includes('timeout')
+    || status === 503
+    || status === 504
+  ) {
+    return `${actionLabel} failed before Gemini returned a response. Check whether this machine can reach generativelanguage.googleapis.com:443 and whether a firewall, proxy, VPN, or regional restriction is blocking outbound HTTPS.${rawDetail}`;
+  }
+
+  if (
+    status === 404
+    || (normalizedMessage.includes('model') && normalizedMessage.includes('not found'))
+    || normalizedMessage.includes('unsupported model')
+    || normalizedMessage.includes('model is not found')
+  ) {
+    return `${actionLabel} failed because the configured Gemini model is unavailable for this key, SDK version, or region.${rawDetail}`;
+  }
+
+  if (
+    status === 400
+    || normalizedMessage.includes('invalid argument')
+    || normalizedMessage.includes('bad request')
+  ) {
+    return `${actionLabel} failed because Gemini rejected the request payload.${rawDetail}`;
+  }
+
+  if (status !== undefined && status >= 500) {
+    return `${actionLabel} failed because the Gemini service returned a server-side error.${rawDetail}`;
+  }
+
+  return `${actionLabel} failed.${rawDetail || ' No additional error details were returned.'}`;
+}
+
 async function fetchRuntimeGeminiApiKey() {
   if (typeof window === 'undefined') {
     return buildTimeGeminiApiKey;
@@ -86,9 +181,10 @@ export async function loadGeminiApiKey() {
 
   if (!geminiApiKeyPromise) {
     geminiApiKeyPromise = fetchRuntimeGeminiApiKey().then((apiKey) => {
-      cachedGeminiApiKey = apiKey || null;
+      const normalizedApiKey = normalizeGeminiApiKey(apiKey);
+      cachedGeminiApiKey = normalizedApiKey || undefined;
       geminiApiKeyPromise = null;
-      return apiKey;
+      return normalizedApiKey;
     });
   }
 

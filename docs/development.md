@@ -107,6 +107,8 @@ GEMINI_API_KEY=your_actual_key_here
 npm run dev
 ```
 
+如果你是在 `npm run dev` 已经运行之后才新建 `.env`，不必为了 Gemini 单独重启整套服务。当前运行时配置接口会在下一次 AI 请求时补读项目根目录的 `.env`；刷新页面或重新打开 AI 助手 / 图片 OCR 即可。
+
 ### 6.3 云服务器 / 云平台运行
 对于 Cloud Run、VPS、Docker / 容器平台等独立部署环境，无需修改项目代码。只需要在平台提供的“环境变量 (Environment Variables)”配置面板中新增：
 
@@ -115,6 +117,15 @@ GEMINI_API_KEY=your_actual_key_here
 ```
 
 之后在部署流程中执行构建，并在运行阶段通过 `npm run start` 启动。`server.ts` 会在运行时读取该环境变量并让前端 Gemini 对话与 OCR 能力正常工作。
+
+### 6.4 Gemini 故障分型与排查
+如果 AI 助手或图片 OCR 失败，当前界面会优先给出更具体的分类，而不是统一提示“请重试”。可以按下面的顺序排查：
+
+1. 如果提示 API key 被拒绝，请先检查 `.env` 或云端环境变量中的 `GEMINI_API_KEY` 是否填错、过期或权限不足。
+2. 如果提示配额或速率限制，请等待一段时间后重试，并检查该 Key 在 Google AI Studio / Google AI 控制台中的额度。
+3. 如果提示无法连接 `generativelanguage.googleapis.com:443`，说明问题在网络链路而不是前端功能实现；请检查本机或部署环境的防火墙、代理、VPN、DNS 和区域访问限制。
+4. 如果提示模型不可用，请检查当前 SDK、Key 权限和区域是否支持所请求的 Gemini 模型。
+5. 如果提示请求参数被拒绝，请优先检查提交给 Gemini 的文件内容或请求结构，而不是先怀疑 `.env`。
 
 > 请特别注意：绝不要把包括 `.env` 在内的含有私人身份和计费 Key 的属性混入 Git 代码库。
 

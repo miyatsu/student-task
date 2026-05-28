@@ -31,6 +31,8 @@ afterEach(() => {
   } else {
     process.env.GEMINI_API_KEY = originalGeminiApiKey;
   }
+
+  vi.unstubAllGlobals();
 });
 
 describe('gemini runtime config', () => {
@@ -99,5 +101,49 @@ describe('gemini runtime config', () => {
 
     await expect(gemini.createGeminiClient()).resolves.toBeNull();
     expect(googleGenAiMocks.GoogleGenAI).not.toHaveBeenCalled();
+  });
+
+  it('retries runtime config loading after an initial missing-key response', async () => {
+    resetGoogleGenAiMock();
+    delete process.env.GEMINI_API_KEY;
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ geminiApiKey: '' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ geminiApiKey: 'runtime-key' }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const gemini = await importGeminiModule();
+
+    await expect(gemini.loadGeminiApiKey()).resolves.toBe('');
+    await expect(gemini.loadGeminiApiKey()).resolves.toBe('runtime-key');
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(gemini.getGeminiApiKey()).toBe('runtime-key');
+  });
+
+  it('classifies network failures with actionable guidance', async () => {
+    const gemini = await importGeminiModule();
+
+    expect(gemini.buildGeminiErrorMessage(new TypeError('fetch failed'), 'Gemini chat')).toContain(
+      'generativelanguage.googleapis.com:443',
+    );
+  });
+
+  it('classifies invalid key failures with a specific setup hint', async () => {
+    const gemini = await importGeminiModule();
+
+    expect(
+      gemini.buildGeminiErrorMessage(
+        { message: 'API key not valid. Please pass a valid API key.', status: 400 },
+        'Gemini OCR',
+      ),
+    ).toContain('rejected the API key');
   });
 });

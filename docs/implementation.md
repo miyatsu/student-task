@@ -168,11 +168,12 @@ Modal --> User: 关闭增强弹窗
 ## 4. 其它特定扩展阅读
 本站集成了 Gemini 生成大模型，其实现在于 `[src/components/AiAssistant.tsx](../src/components/AiAssistant.tsx)` 与 `[src/lib/gemini.ts](../src/lib/gemini.ts)`。底层使用 Google 官方发布的 Node/Web 兼容 GenAI SDK 支持流式上下文打印，并通过延迟初始化避免在本地缺失 `GEMINI_API_KEY` 时于模块加载阶段直接抛错。
 
-为了兼容 Google AI Studio 导出后在本地或独立云平台的部署方式，`[server.ts](../server.ts)` 额外提供了 `/api/runtime-config`，在 `npm run start` 运行时从环境变量读取 `GEMINI_API_KEY`，再由 `[src/lib/gemini.ts](../src/lib/gemini.ts)` 在浏览器侧懒加载并缓存。这意味着：
+为了兼容 Google AI Studio 导出后在本地或独立云平台的部署方式，`[server.ts](../server.ts)` 额外提供了 `/api/runtime-config`，在 `npm run start` 运行时从环境变量读取 `GEMINI_API_KEY`，再由 `[src/lib/gemini.ts](../src/lib/gemini.ts)` 在浏览器侧懒加载并缓存。最近又补了一层针对本地开发的韧性处理：如果服务进程先启动、`.env` 后创建，`[src/server/runtime-config.ts](../src/server/runtime-config.ts)` 会在下次请求时补读项目根目录的 `.env`，而浏览器侧也不再把“空 key”永久缓存死。这意味着：
 1. 本地开发可以通过 `.env` + `npm run dev` 启用 Gemini。
 2. 云端部署可以只在平台环境变量里配置 `GEMINI_API_KEY`，无需为了替换 Key 再修改前端代码。
+3. 本地补建 `.env` 后，只要刷新页面或重新打开 AI 助手 / OCR，就能重新探测到新 key，而不是必须重启整套应用。
 
-同样地，图片 OCR 的 Gemini 调用也只会在用户真正触发该能力时初始化；若本地没有配置 `.env` 中的 `GEMINI_API_KEY`，界面会显示包含 Google AI Studio 申请地址、本地 `.env` 配置方式和云端环境变量配置方式的帮助提示，而不是让主应用白屏。更多详情参考 `docs.md` 或官方仓库文档。
+同样地，图片 OCR 的 Gemini 调用也只会在用户真正触发该能力时初始化；若本地没有配置 `.env` 中的 `GEMINI_API_KEY`，界面会显示包含 Google AI Studio 申请地址、本地 `.env` 配置方式和云端环境变量配置方式的帮助提示，而不是让主应用白屏。若调用真正进入 Gemini 之后失败，`[src/lib/gemini.ts](../src/lib/gemini.ts)` 现在会进一步把异常分型成“API key 被拒绝”“配额/速率限制”“无法连到 `generativelanguage.googleapis.com:443` 的网络问题”“模型不可用”或“请求参数不合法”，供 `[src/components/AiAssistant.tsx](../src/components/AiAssistant.tsx)` 与 `[src/App.tsx](../src/App.tsx)` 复用。更多详情参考 `docs.md` 或官方仓库文档。
 
 最近一轮结构整理中，`server.ts` 里原本内联的部分字符串式逻辑也被抽到了独立服务端模块：
 
