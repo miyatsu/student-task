@@ -7,6 +7,7 @@
 - **操作系统**：Windows 10/11 (WSL 推荐)，macOS，或各大 Linux 发行版。
 - **Node.js**: `v20.19+` 或 `v22.13+` 稳定版。低于该版本的 Node.js 会在 `npm install` 前被直接拒绝，因为当前依赖链（Vite / pdfjs 等）已不再支持 Node 18。
 - **npm**: 随同 Node.js 提供的较新版本进行包管理。
+- **Python**: `3.9+`。图片 OCR 现在通过本地 PaddleOCR 完成，`npm install` 会自动创建项目内虚拟环境并安装 PaddlePaddle / PaddleOCR，因此开发机和演示机需要预先具备可调用的 Python。
 
 ## 2. 下载及依赖安装
 
@@ -26,8 +27,23 @@
 由于内置了大型机器学习依赖 (`@tensorflow/tfjs`, `upscaler`) 以及 PDF 解析库，该步骤可能耗时几十秒。
 当前依赖集不再包含 `better-sqlite3` 这类 sqlite 原生编译模块；只要使用受支持的 Node.js 版本，常规 `npm install` 不应再要求 Visual Studio C++ Build Tools。若安装失败，优先检查 Node.js 版本与网络访问 npm registry 的情况。
 
+从这一版开始，`npm install` 还会在 `postinstall` 阶段自动执行 `npm run setup:ocr`：
+
+1. 检测本机可用的 Python `3.9+`
+2. 在项目内创建 `.local/paddleocr/venv`
+3. 安装 `paddlepaddle` CPU 版与 `paddleocr`
+4. 预热默认 OCR 模型，把离线所需的权重下载到 `.local/paddleocr/cache`
+
+因此，第一次安装依赖会比之前更久一些，但换来的结果是图片 OCR 在安装完成后即可离线使用，而不需要再向任何云端 OCR provider 请求。
+
 ```bash
 npm install
+```
+
+如果自动 bootstrap 因 Python 缺失、网络限制或本地环境异常而中断，可以在修复环境后单独重跑：
+
+```bash
+npm run setup:ocr
 ```
 
 ## 3. 本地启动与调试
@@ -63,7 +79,7 @@ npm run preview
 npm run preview:static
 ```
 
-如果你要把应用部署到 Cloud Run、VPS、Docker 容器或其他云平台，AI provider 的 API key 不需要在构建阶段硬编码到前端产物里。只要在运行平台配置好 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的一个或多个，`npm run start` 启动时的 `server.ts` 就会在服务端的 `/api/ai/*` gateway 中按顺序选择首个可用 provider。
+如果你要把应用部署到 Cloud Run、VPS、Docker 容器或其他云平台，AI provider 的 API key 不需要在构建阶段硬编码到前端产物里。只要在运行平台配置好 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的一个或多个，`npm run start` 启动时的 `server.ts` 就会在服务端的 `/api/ai/chat` gateway 中按顺序选择首个可用 provider。与此同时，图片 OCR 所需的 PaddleOCR runtime 也应在镜像构建或机器初始化阶段通过 `npm install` / `npm run setup:ocr` 一并装好，这样 `/api/ocr/image` 才能保持真正的本地离线可用。
 
 ## 5. 项目风格及代码提交
 在提交代码之前：
@@ -80,7 +96,7 @@ npm run preview:static
 - `winword.exe` 没有稳定的官方 headless PDF CLI；常见 Python 库 `docx2pdf` 在 Windows/macOS 上本质仍然依赖本地 Word 自动化，而 UNO / `unoconv` 一类方案本质仍然依赖 LibreOffice。因此这些 Python 或脚本方案被视为调用包装层，而不是新的独立默认导出链路。
 
 ## 6. 添加环境变量
-虽然前端代码绝大部分运行在客户端，但如果使用到了特定的云端能力（如 AI 对话或 OCR），则需要在项目根目录依据示例创建 `.env` 文件配置服务端参数。
+虽然前端代码绝大部分运行在客户端，但如果使用到了特定的云端能力（当前主要是 AI 助手对话），则需要在项目根目录依据示例创建 `.env` 文件配置服务端参数。图片 OCR 不再依赖这些环境变量，而是走本地 PaddleOCR runtime。
 
 ### 6.1 获取 AI Provider Key
 当前支持的 AI provider 及默认尝试顺序为：`Gemini -> OpenAI / ChatGPT -> DeepSeek`。
@@ -95,7 +111,7 @@ npm run preview:static
 
 如果该项目来自 Google AI Studio 导出，请不要假设本地开发环境会自动继承 AI Studio 中的密钥注入。你需要在本机手动创建 `.env` 并填入可用的 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的一个或多个。
 
-未配置任何 AI key 时，应用主界面仍会正常启动；只有 AI 助手和图片 OCR 会在界面内提示“未配置”并保持不可用，不会再导致整页白屏。
+未配置任何 AI key 时，应用主界面仍会正常启动；AI 助手会在界面内提示“未配置”并保持不可用，但图片 OCR 仍可继续工作，只要本地 PaddleOCR runtime 已经 bootstrap 完成。
 
 ### 6.2 本地物理机运行
 在项目根目录新建 `.env` 文件（不要提交到 Git），填入：
@@ -113,7 +129,7 @@ DEEPSEEK_API_KEY=your_deepseek_key_here
 npm run dev
 ```
 
-如果你是在 `npm run dev` 已经运行之后才新建 `.env`，不必为了 AI 单独重启整套服务。当前运行时配置接口会在下一次 AI 请求时补读项目根目录的 `.env`；刷新页面或重新打开 AI 助手 / 图片 OCR 即可。
+如果你是在 `npm run dev` 已经运行之后才新建 `.env`，不必为了 AI 单独重启整套服务。当前运行时配置接口会在下一次 AI 请求时补读项目根目录的 `.env`；刷新页面或重新打开 AI 助手即可。图片 OCR 的可用性则由本地 PaddleOCR bootstrap 状态决定，不依赖 `.env`。
 
 ### 6.3 云服务器 / 云平台运行
 对于 Cloud Run、VPS、Docker / 容器平台等独立部署环境，无需修改项目代码。只需要在平台提供的“环境变量 (Environment Variables)”配置面板中新增：
@@ -124,16 +140,23 @@ OPENAI_API_KEY=your_openai_key_here
 DEEPSEEK_API_KEY=your_deepseek_key_here
 ```
 
-之后在部署流程中执行构建，并在运行阶段通过 `npm run start` 启动。`server.ts` 会在运行时读取这些环境变量，并通过服务端 `/api/ai/chat` 与 `/api/ai/ocr` gateway 让前端 AI 对话与 OCR 能力正常工作，而不是把原始 key 注入浏览器。
+之后在部署流程中执行构建，并在运行阶段通过 `npm run start` 启动。`server.ts` 会在运行时读取这些环境变量，并通过服务端 `/api/ai/chat` gateway 让前端 AI 对话能力正常工作，而不是把原始 key 注入浏览器。图片 OCR 则通过独立的 `/api/ocr/image` route 调用本地 PaddleOCR。
 
 ### 6.4 AI 故障分型与排查
-如果 AI 助手或图片 OCR 失败，当前界面会优先给出更具体的分类，而不是统一提示“请重试”。可以按下面的顺序排查：
+如果 AI 助手失败，当前界面会优先给出更具体的分类，而不是统一提示“请重试”。可以按下面的顺序排查：
 
 1. 如果提示 API key 被拒绝，请先检查 `.env` 或云端环境变量中的已配置 key 是否填错、过期或权限不足。
 2. 如果提示配额或速率限制，请等待一段时间后重试，并检查对应 provider 账号的用量额度。
 3. 如果提示 AI provider 网络不可达，说明问题在网络链路而不是前端功能实现；请检查本机或部署环境的防火墙、代理、VPN、DNS 和区域访问限制。
 4. 如果提示模型不可用，请检查当前 provider 账号、区域和默认模型访问权限是否支持该能力。
 5. 如果提示请求参数被拒绝，请优先检查提交给 AI 的文件内容或请求结构，而不是先怀疑 `.env`。
+
+对于图片 OCR，请优先检查另一组本地条件：
+
+1. 本机是否已安装 Python `3.9+`。
+2. `npm install` 或 `npm run setup:ocr` 是否成功完成。
+3. `.local/paddleocr/venv` 与 `.local/paddleocr/cache` 是否已经生成。
+4. 若 bootstrap 曾被中断，重新执行 `npm run setup:ocr` 以补齐 PaddleOCR 与离线模型。
 
 > 请特别注意：绝不要把包括 `.env` 在内的含有私人身份和计费 Key 的属性混入 Git 代码库。
 

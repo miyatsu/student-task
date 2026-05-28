@@ -43,7 +43,7 @@ Word 转 PDF 继续遵循 local-first：`DOCX` 在浏览器内直接转 HTML 并
 这是工作区里的“变形”能力：图片转 PDF、Word 转 PDF、PDF 压缩、多 PDF 合并，一站式完成，无需跳转多个工具。
 
 - **I**: Image & Intelligence（图像增强与智能随选）
-支持本地增强图片，同时将 AI 设为可选项。仅在需要时开启 AI，对话与 OCR 会在已配置的 Gemini、OpenAI、DeepSeek 中按默认顺序自动选择首个可用 provider，让智能随需而至，不打扰、不捆绑。
+支持本地增强图片，同时把“图像理解”和“语言智能”拆成两条不同的本地优先路径：图片 OCR 现在通过本地 PaddleOCR 离线完成，不依赖任何云端 key；AI 助手则继续保持可选，仅在需要总结、问答或多文档分析时，才会在已配置的 Gemini、OpenAI、DeepSeek 中按默认顺序自动选择首个可用 provider。
 
 - **E**: Extract & Export（提取与统一导出）
 提取页面、提取图像、提取文本，最后将处理结果统一打包导出，让整个流程有始有终，干净利落。
@@ -73,13 +73,15 @@ Word 转 PDF 继续遵循 local-first：`DOCX` 在浏览器内直接转 HTML 并
 
 如果这是从 Google AI Studio 导出的项目，请额外注意：AI Studio 托管环境通常只会替它自己的 Gemini 能力注入密钥；本地运行时如果没有在项目根目录配置可用的 `.env`，你仍然需要自行提供 `GEMINI_API_KEY`、`OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY` 中的一个或多个。
 
-AI Key 配置速览：
-- 支持的 provider 默认尝试顺序是 `Gemini -> OpenAI / ChatGPT -> DeepSeek`。如果你同时配置了多个 key，系统会按这个顺序使用首个可完成当前任务的 provider。
+AI 与 OCR 配置速览：
+- 支持的 AI provider 默认尝试顺序是 `Gemini -> OpenAI / ChatGPT -> DeepSeek`。如果你同时配置了多个 key，AI 助手会按这个顺序使用首个可完成当前任务的 provider。
 - 获取独立 Key：Gemini 在 Google AI Studio 申请 <https://aistudio.google.com/app/apikey>；OpenAI / ChatGPT 在 OpenAI Platform 申请 <https://platform.openai.com/api-keys>；DeepSeek 在 DeepSeek Platform 申请 <https://platform.deepseek.com/api_keys>。
-- 本地运行时，在项目根目录创建 `.env` 并写入一个或多个 key，例如 `GEMINI_API_KEY=...`、`OPENAI_API_KEY=...`、`DEEPSEEK_API_KEY=...`，然后执行 `npm run dev`。
-- 如果 `npm run dev` 已经先启动、随后才补建 `.env`，当前 `/api/runtime-config` 会在下次 AI 请求时重新读取该文件；刷新页面或重新打开 AI 助手 / OCR 即可，无需因为这一个配置再重启整套应用。
-- 云端部署时，无需改前端代码；只需在平台环境变量里设置同名 key。`npm run start` 启动的 `server.ts` 会在服务端 `/api/ai/*` gateway 中按顺序选择 provider，浏览器不会直接拿到这些原始 key。
-- AI 相关报错现在会尽量区分成“API key 被拒绝”“配额/速率限制”“AI provider 网络不可达”“模型不可用”或“请求参数不合法”，便于直接判断是配置、网络还是调用层问题。
+- 图片 OCR 不依赖这些 AI key。当前它走的是本地 PaddleOCR 运行时；`npm install` 会自动执行 `npm run setup:ocr`，创建项目内的 Python 虚拟环境、安装 PaddlePaddle / PaddleOCR，并预热离线模型。
+- 为了让本地 OCR bootstrap 成功，机器上需要预先安装 Python `3.9+`。如果安装阶段因为 Python 缺失或网络原因中断，可以在补齐环境后手动重跑 `npm run setup:ocr`。
+- 本地运行 AI 助手时，在项目根目录创建 `.env` 并写入一个或多个 key，例如 `GEMINI_API_KEY=...`、`OPENAI_API_KEY=...`、`DEEPSEEK_API_KEY=...`，然后执行 `npm run dev`。
+- 如果 `npm run dev` 已经先启动、随后才补建 `.env`，当前 `/api/runtime-config` 会在下次 AI 请求时重新读取该文件；刷新页面或重新打开 AI 助手即可，无需因为这一个配置再重启整套应用。图片 OCR 的可用性则取决于本地 PaddleOCR runtime 是否安装完成。
+- 云端部署时，无需改前端代码；只需在平台环境变量里设置同名 AI key。`npm run start` 启动的 `server.ts` 会在服务端 `/api/ai/chat` gateway 中按顺序选择 provider，而图片 OCR 则通过本地 `/api/ocr/image` route 调用 PaddleOCR，浏览器不会直接拿到这些原始 key。
+- AI 相关报错现在会尽量区分成“API key 被拒绝”“配额/速率限制”“AI provider 网络不可达”“模型不可用”或“请求参数不合法”；本地 OCR 报错则会优先指出是 Python / PaddleOCR 未安装、离线模型未预热，还是本地 OCR runner 本身异常。
 
 ---
 *本项目不强制绑定远端的云端数据库或者依赖云侧持久化存储，核心在于使用浏览器内置机能（`tf.js`, Web Workers 等）保护您的重要事务文档数据安全。*

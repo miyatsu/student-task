@@ -51,11 +51,12 @@
 - 如果你是在开发服务器已经运行后才新建 `.env`，刷新页面或重新打开 AI 助手即可；当前运行时配置会在下一次请求时补读 `.env`，不用专门重启整套应用。
 - 如果 AI 助手报的是“API key 被拒绝”，那是密钥配置问题；如果报的是“AI provider 网络不可达”，那是网络或出口访问问题；如果报的是“模型不可用”或“配额不足”，则应分别检查模型权限与额度，而不是盲目重复重试。
 
-### 6. 图片文字提取（AI OCR）
+### 6. 图片文字提取（本地 PaddleOCR）
 - 在图片条目上点击“扫描文字”按钮，可以把图片中的文本提取为 Markdown 文件下载到本地。
-- 该能力同样依赖 AI key。如果本地未配置 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的任何一个，界面会弹出提示，引导你先配置可用 key。
-- 当前图片 OCR 会自动尝试支持图像分析的 provider；如果只配置了文本型 provider，系统会明确提示你需要补充支持图片分析的 AI key，而不是静默失败。
-- OCR 失败时，弹窗也会直接提示更具体的原因，例如 API key、网络、配额或模型问题，便于区分到底是配置故障还是 AI 服务链路异常。
+- 该能力不再依赖 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY`。图片 OCR 当前走的是本地 PaddleOCR runtime，因此 AI 助手是否配置 key，不会影响你提取图片文字。
+- 在正常安装流程中，`npm install` 会自动执行本地 OCR bootstrap：创建项目内 Python 虚拟环境、安装 PaddlePaddle / PaddleOCR，并预热默认离线模型。完成之后，图片 OCR 即使在断网状态下也可以继续使用。
+- 如果本机缺少 Python `3.9+`，或者安装阶段曾被中断，界面会直接提示你补齐 Python 后重跑 `npm install` 或 `npm run setup:ocr`，而不是再引导你去配置 AI key。
+- OCR 失败时，当前提示会优先区分是“本地 PaddleOCR 尚未安装/预热完成”“本地 OCR runner 启动失败”还是“识别过程本身异常”，便于直接判断是安装链还是识别链出了问题。
 
 ### 7. 图片批量转 PDF 进度反馈
 - 当你一次选择多张图片并点击 **Convert to PDF** 后，图片区块底部会显示一张绿色进度卡片。

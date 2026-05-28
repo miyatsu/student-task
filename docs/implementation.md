@@ -166,7 +166,7 @@ Modal --> User: 关闭增强弹窗
 ```
 
 ## 4. 其它特定扩展阅读
-本站当前集成的是一个 provider 无感知的 AI gateway：前端入口仍然集中在 `[src/components/AiAssistant.tsx](../src/components/AiAssistant.tsx)` 与 `[src/App.tsx](../src/App.tsx)`，但真正的 provider 选择、顺序回退和上游调用已经下沉到 `[src/server/ai.ts](../src/server/ai.ts)`。浏览器侧只通过 `[src/lib/ai.ts](../src/lib/ai.ts)` 与本地 `/api/ai/chat`、`/api/ai/ocr` 交互，不再直接拿到原始第三方 API key。
+本站当前把“AI 助手对话”和“图片 OCR”拆成了两条不同的能力链：前者是 provider 无感知的 AI gateway，后者是本地优先的 PaddleOCR pipeline。前端入口仍然集中在 `[src/components/AiAssistant.tsx](../src/components/AiAssistant.tsx)` 与 `[src/App.tsx](../src/App.tsx)`，但真正的 provider 选择、顺序回退和本地 OCR 调用已经分别下沉到 `[src/server/ai.ts](../src/server/ai.ts)` 与 `[src/server/local-ocr.ts](../src/server/local-ocr.ts)`。浏览器侧只通过 `[src/lib/ai.ts](../src/lib/ai.ts)` 与本地 `/api/ai/chat`、`/api/ocr/image` 交互，不再直接拿到原始第三方 API key。
 
 当前默认支持三类 provider，并按固定顺序自动尝试：
 1. `Gemini`
@@ -182,13 +182,21 @@ Modal --> User: 关闭增强弹窗
 1. Gemini 继续走原生的多模态文件输入，直接处理 PDF、图片和文本文件。
 2. OpenAI / DeepSeek 侧则会在服务端把 PDF 提取为文本、把图片转成 data URL，再拼成统一的对话上下文。其中 DeepSeek 目前只参与文本型对话，不参与图片 OCR，因此图像任务会自动跳过它并尝试下一个 provider。
 
-同样地，图片 OCR 现在也是 provider 无感知入口：若本地没有配置任何 AI key，界面会显示统一的多 provider 帮助提示；若调用真正进入上游 provider 之后失败，服务端会把异常归类成“API key 被拒绝”“配额/速率限制”“AI provider 网络不可达”“模型不可用”或“请求参数不合法”，再由前端直接展示给用户。更多详情参考 `docs.md` 或官方仓库文档。
+图片 OCR 则不再走上游 AI provider。当前实现改成了本地 PaddleOCR runtime：
+
+1. `npm install` 会触发 `[scripts/bootstrap-local-ocr.mjs](../scripts/bootstrap-local-ocr.mjs)`，自动探测 Python `3.9+`、创建 `.local/paddleocr/venv`、安装 `paddlepaddle` CPU 版和 `paddleocr`，并在 `.local/paddleocr/cache` 里预热默认离线模型。
+2. `[src/server/local-ocr.ts](../src/server/local-ocr.ts)` 会读取 `.local/paddleocr/install-state.json`，把“本地 OCR 是否可用”的摘要并入 `/api/runtime-config`，同时在真正的 OCR 请求到来时把图片 base64 负载交给 Python runner。
+3. `[scripts/local-ocr/ocr_runner.py](../scripts/local-ocr/ocr_runner.py)` 负责接收图片、调用 PaddleOCR，并将识别结果按 Markdown 友好的行文本返回给 Node。
+4. `[scripts/local-ocr/warmup.py](../scripts/local-ocr/warmup.py)` 负责初始化 PaddleOCR 并触发一次最小化推理，用安装期而不是用户第一次点击 OCR 时去下载模型，从而让后续图片 OCR 可以离线工作。
+
+这样做的直接结果是：图片 OCR 不再受 Gemini / OpenAI / DeepSeek key 是否存在、网络是否可达、上游模型是否开放视觉能力等条件影响。只要本地 PaddleOCR runtime 已经 bootstrap 成功，它就能在断网条件下继续工作。
 
 最近一轮结构整理中，`server.ts` 里原本内联的部分字符串式逻辑也被抽到了独立服务端模块：
 
 1. `[src/server/runtime-config.ts](../src/server/runtime-config.ts)` 统一负责运行时 AI provider 配置读取与裁剪，并只向浏览器暴露“哪些 provider 已配置”的摘要而不是原始 key。
-2. `[src/server/ai.ts](../src/server/ai.ts)` 负责 AI provider 顺序尝试、能力判断、OpenAI / DeepSeek 请求组装以及 OCR / 对话的统一入口。
-3. `[src/server/compression.ts](../src/server/compression.ts)` 负责 PDF 压缩等级映射、压缩任务 ID 生成以及 Ghostscript 命令拼装。
-4. `[src/server/word-conversion.ts](../src/server/word-conversion.ts)` 负责旧版 `.doc` 的文本提取、HTML 转义与结构化包装。
+2. `[src/server/ai.ts](../src/server/ai.ts)` 负责 AI provider 顺序尝试、能力判断以及 OpenAI / DeepSeek 请求组装，当前只处理 AI 助手对话。
+3. `[src/server/local-ocr.ts](../src/server/local-ocr.ts)` 负责本地 PaddleOCR runtime 的状态探测与图片 OCR 调度。
+4. `[src/server/compression.ts](../src/server/compression.ts)` 负责 PDF 压缩等级映射、压缩任务 ID 生成以及 Ghostscript 命令拼装。
+5. `[src/server/word-conversion.ts](../src/server/word-conversion.ts)` 负责旧版 `.doc` 的文本提取、HTML 转义与结构化包装。
 
 这样一来，`server.ts` 主要保留 Express 路由与请求流转，而可预测、可复用的纯逻辑则能通过自动化测试直接验证。

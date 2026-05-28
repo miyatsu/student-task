@@ -13,6 +13,12 @@ const configuredRuntimeConfig: RuntimeConfig = {
     { id: 'openai', label: 'OpenAI / ChatGPT', configured: false, supportsVision: true },
     { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
   ],
+  localImageOcr: {
+    engine: 'PaddleOCR',
+    available: true,
+    offlineReady: true,
+    detail: 'ready',
+  },
 };
 
 afterEach(() => {
@@ -42,6 +48,12 @@ describe('ai runtime config', () => {
         ok: true,
         json: async () => ({
           aiProviders: configuredRuntimeConfig.aiProviders.map((provider) => ({ ...provider, configured: false })),
+          localImageOcr: {
+            engine: 'PaddleOCR',
+            available: false,
+            offlineReady: false,
+            detail: 'not ready',
+          },
         }),
       })
       .mockResolvedValueOnce({
@@ -54,6 +66,12 @@ describe('ai runtime config', () => {
 
     await expect(ai.loadAiRuntimeConfig()).resolves.toEqual({
       aiProviders: configuredRuntimeConfig.aiProviders.map((provider) => ({ ...provider, configured: false })),
+      localImageOcr: {
+        engine: 'PaddleOCR',
+        available: false,
+        offlineReady: false,
+        detail: 'not ready',
+      },
     });
     await expect(ai.loadAiRuntimeConfig()).resolves.toEqual(configuredRuntimeConfig);
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -77,14 +95,14 @@ describe('ai runtime config', () => {
     await expect(ai.requestAiAssistantReply({ prompt: 'hello', messages: [], files: [] })).resolves.toBe('assistant reply');
   });
 
-  it('surfaces local AI gateway connectivity failures with a specific hint', async () => {
+  it('surfaces local OCR gateway connectivity failures with a specific hint', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
     vi.stubGlobal('fetch', fetchMock);
 
     const ai = await importAiModule();
 
-    await expect(ai.extractImageTextWithAi({ data: 'abc', mimeType: 'image/png', name: 'scan.png' })).rejects.toThrow(
-      'local AI gateway',
+    await expect(ai.extractImageTextWithLocalOcr({ data: 'abc', mimeType: 'image/png', name: 'scan.png' })).rejects.toThrow(
+      'local OCR gateway',
     );
   });
 });

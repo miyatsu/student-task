@@ -4,7 +4,7 @@
 
 ## 1. 测试策略
 鉴于系统的纯前端运行特点：
-1. **组件与应用层自动化测试**：当前已经为 `src/features/files/file-utils.ts` 建立纯逻辑回归测试，并为文件列表组件、`PdfEditor` 页操作流程、`ai.ts` 运行时配置加载，以及服务端多 provider AI gateway fallback 建立了应用层回归测试。
+1. **组件与应用层自动化测试**：当前已经为 `src/features/files/file-utils.ts` 建立纯逻辑回归测试，并为文件列表组件、`PdfEditor` 页操作流程、`ai.ts` 运行时配置加载、`local-ocr.ts` 本地 OCR 可用性，以及服务端多 provider AI gateway fallback 建立了应用层回归测试。
 2. **浏览器 E2E 原理验证**：保障 Canvas 操作不产生跨域死锁或者内存逸出（OOM）。
 3. **集成验证**：重点在跨模块之间流转的文件，例如是否在不同区域依然保持正确的名字以及拓展后缀名。这需要人工 Checklist 校验。
 4. **实验 / 诊断脚本**：`scripts/experiments/` 下的脚本用于环境探测、库能力验证和手工联调，不属于自动化回归测试树，也不会被 `npm test` 执行。
@@ -26,8 +26,8 @@ npm run test:app
 - `npm run test:app` 会运行当前的 Vitest 应用层回归测试，包括：
 	- `ImageFilesSection`、`PdfFilesSection`、`WordFilesSection` 的列表交互、行内上移/下移、排序头 UI、批量操作事件路由，以及图片 / Word 转 PDF 进度展示。
 	- `PdfEditor` 的页删除、页抽取与“禁止删除全部页面”行为。
-	- `ai.ts` 的运行时配置加载、缓存与本地 AI gateway 请求逻辑。
-	- `server.ts` 中压缩命令生成、旧版 `.doc` 文本提取、运行时 AI provider 配置读取，以及 `src/server/ai.ts` 的 provider 顺序回退逻辑。
+	- `ai.ts` 的运行时配置加载、缓存与本地 gateway 请求逻辑。
+	- `server.ts` 中压缩命令生成、旧版 `.doc` 文本提取、运行时 AI / 本地 OCR 配置读取，以及 `src/server/ai.ts` 的 provider 顺序回退逻辑与 `src/server/local-ocr.ts` 的本地 OCR 调度逻辑。
 
 兼容性说明：`npm run test:ui` 目前仍保留为 `npm run test:app` 的别名，方便沿用旧命令。
 
@@ -90,6 +90,7 @@ npm run test:app
 | 用例编号 | 用例名称         | 操作动作                                                                 | 预期结果                                                                 | 状态 |
 |----------|------------------|--------------------------------------------------------------------------|--------------------------------------------------------------------------|------|
 | TC-16    | 开发端口自动回退 | 保持一个现有开发实例占用 `3000`，在第二个终端再次执行 `npm run dev`。       | 第二个实例不会崩溃；终端明确打印新的可用地址（如 `http://localhost:3001`）。 | [ ]  |
-| TC-17    | 缺失 AI Key 启动 | 删除或暂时重命名本地 `.env` 后执行 `npm run dev`，并在浏览器中打开首页。 | 首页和基础文件处理功能仍能正常渲染；只有 AI 助手和图片 OCR 提示需要配置 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的至少一个。 | [ ]  |
-| TC-18    | 生产环境运行时注入 | 在已构建产物上设置运行时 `GEMINI_API_KEY`、`OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`，通过 `npm run start` 启动服务并访问 `/api/runtime-config`。 | 服务返回的是“哪些 provider 已配置”的摘要，而不是原始 key；AI 功能不依赖把 key 预先写死进构建产物。 | [ ]  |
-| TC-19    | 多 Provider 顺序回退 | 同时配置多个 AI key，其中首个 provider 故意使用无效 key，后一个 provider 使用有效 key，再触发 AI 助手或 OCR。 | 系统会跳过前一个失败 provider，自动回退到后一个可用 provider，且界面无需手动切换模型。 | [ ]  |
+| TC-17    | 缺失 AI Key 启动 | 删除或暂时重命名本地 `.env` 后执行 `npm run dev`，并在浏览器中打开首页。 | 首页和基础文件处理功能仍能正常渲染；AI 助手会提示需要配置 `GEMINI_API_KEY`、`OPENAI_API_KEY`、`DEEPSEEK_API_KEY` 中的至少一个，但图片 OCR 仍可继续工作，只要本地 PaddleOCR runtime 已安装。 | [ ]  |
+| TC-17A   | 本地 OCR bootstrap 缺失 | 删除或临时重命名 `.local/paddleocr/` 后，在浏览器中对图片执行 OCR。 | 界面应明确提示需要安装 Python `3.9+` 并重跑 `npm install` 或 `npm run setup:ocr`，而不是提示 AI key 缺失。 | [ ]  |
+| TC-18    | 生产环境运行时注入 | 在已构建产物上设置运行时 `GEMINI_API_KEY`、`OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY`，通过 `npm run start` 启动服务并访问 `/api/runtime-config`。 | 服务返回的是“哪些 provider 已配置”以及“本地 OCR runtime 是否就绪”的摘要，而不是原始 key；AI 助手不依赖把 key 预先写死进构建产物。 | [ ]  |
+| TC-19    | 多 Provider 顺序回退 | 同时配置多个 AI key，其中首个 provider 故意使用无效 key，后一个 provider 使用有效 key，再触发 AI 助手。 | 系统会跳过前一个失败 provider，自动回退到后一个可用 provider，且界面无需手动切换模型。图片 OCR 不参与这条回退链，因为它已改为本地 PaddleOCR。 | [ ]  |

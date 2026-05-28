@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { runAiChatRequest, runAiOcrRequest } from './ai';
+import { runAiChatRequest } from './ai';
 
 describe('server AI provider fallback', () => {
   it('uses the first successful configured provider for chat', async () => {
@@ -26,21 +26,6 @@ describe('server AI provider fallback', () => {
         },
       ),
     ).resolves.toEqual({ text: 'openai reply' });
-  });
-
-  it('skips DeepSeek for image OCR and falls back to Gemini or OpenAI only', async () => {
-    await expect(
-      runAiOcrRequest(
-        { file: { data: 'abc', mimeType: 'image/png', name: 'scan.png' } },
-        {
-          env: {
-            DEEPSEEK_API_KEY: 'deepseek-key',
-          },
-        },
-      ),
-    ).rejects.toMatchObject({
-      code: 'ai-no-capable-provider',
-    });
   });
 
   it('rejects requests when no provider key is configured', async () => {

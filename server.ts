@@ -14,7 +14,8 @@ import {
   createCompressionJobId,
   resolvePdfCompressionSettings,
 } from "./src/server/compression.ts";
-import { isAiRequestError, runAiChatRequest, runAiOcrRequest } from "./src/server/ai.ts";
+import { isAiRequestError, runAiChatRequest } from "./src/server/ai.ts";
+import { isLocalOcrRequestError, runLocalImageOcrRequest } from "./src/server/local-ocr.ts";
 import { readRuntimeConfig } from "./src/server/runtime-config.ts";
 import { extractLegacyWordHtml } from "./src/server/word-conversion.ts";
 import {
@@ -67,20 +68,23 @@ async function startServer() {
     }
   });
 
-  app.post("/api/ai/ocr", async (req, res) => {
+  const handleImageOcrRequest = async (req: express.Request, res: express.Response) => {
     try {
-      const response = await runAiOcrRequest(req.body);
+      const response = await runLocalImageOcrRequest(req.body);
       res.setHeader("Cache-Control", "no-store");
       res.json(response);
     } catch (error) {
-      console.error("AI OCR error:", error);
-      if (isAiRequestError(error)) {
+      console.error("Image OCR error:", error);
+      if (isLocalOcrRequestError(error)) {
         return res.status(error.status).json({ error: error.message, code: error.code });
       }
 
-      res.status(500).json({ error: "AI OCR request failed." });
+      res.status(500).json({ error: "Image OCR request failed." });
     }
-  });
+  };
+
+  app.post("/api/ocr/image", handleImageOcrRequest);
+  app.post("/api/ai/ocr", handleImageOcrRequest);
 
   app.post("/api/word/extract-html", upload.single("word"), async (req, res) => {
     if (!req.file) {

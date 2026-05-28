@@ -19,6 +19,7 @@ pnpm-debug.log*
 
 .vscode/
 .sixth/
+.local/
 
 .DS_Store
 Thumbs.db

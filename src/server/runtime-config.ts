@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import type { AiProviderId, RuntimeConfig } from '../lib/ai-types';
+import { readLocalImageOcrRuntime } from './local-ocr';
 import {
   AI_PROVIDER_LABELS,
   AI_PROVIDER_ORDER,
@@ -10,6 +11,7 @@ import {
 
 interface RuntimeConfigDependencies {
   loadProcessEnv?: () => void;
+  readLocalImageOcrRuntime?: () => RuntimeConfig['localImageOcr'];
 }
 
 type RuntimeEnv = Partial<Pick<NodeJS.ProcessEnv, 'GEMINI_API_KEY' | 'OPENAI_API_KEY' | 'DEEPSEEK_API_KEY'>>;
@@ -33,7 +35,10 @@ function loadRuntimeDotEnvFile() {
 
 export function readRuntimeConfig(
   env: RuntimeEnv = process.env,
-  { loadProcessEnv = loadRuntimeDotEnvFile }: RuntimeConfigDependencies = {},
+  {
+    loadProcessEnv = loadRuntimeDotEnvFile,
+    readLocalImageOcrRuntime: readLocalImageOcrRuntimeSummary = readLocalImageOcrRuntime,
+  }: RuntimeConfigDependencies = {},
 ): RuntimeConfig {
   const runtimeEnv = env === process.env
     ? (loadProcessEnv(), { ...env })
@@ -46,6 +51,7 @@ export function readRuntimeConfig(
       configured: Boolean(getProviderApiKey(providerId, runtimeEnv)),
       supportsVision: AI_PROVIDER_SUPPORTS_VISION[providerId],
     })),
+    localImageOcr: readLocalImageOcrRuntimeSummary(),
   };
 }
 

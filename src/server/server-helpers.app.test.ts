@@ -51,22 +51,54 @@ describe('server compression helpers', () => {
 
 describe('runtime config helpers', () => {
   it('returns provider summaries instead of leaking raw API keys', () => {
-    expect(readRuntimeConfig({ GEMINI_API_KEY: ' runtime-key ' })).toEqual({
+    expect(readRuntimeConfig(
+      { GEMINI_API_KEY: ' runtime-key ' },
+      {
+        readLocalImageOcrRuntime: () => ({
+          engine: 'PaddleOCR',
+          available: true,
+          offlineReady: true,
+          detail: 'ready',
+        }),
+      },
+    )).toEqual({
       aiProviders: [
         { id: 'gemini', label: 'Google Gemini', configured: true, supportsVision: true },
         { id: 'openai', label: 'OpenAI / ChatGPT', configured: false, supportsVision: true },
         { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
       ],
+      localImageOcr: {
+        engine: 'PaddleOCR',
+        available: true,
+        offlineReady: true,
+        detail: 'ready',
+      },
     });
   });
 
   it('returns all providers as unconfigured when no key is present', () => {
-    expect(readRuntimeConfig({ GEMINI_API_KEY: undefined, OPENAI_API_KEY: undefined, DEEPSEEK_API_KEY: undefined })).toEqual({
+    expect(readRuntimeConfig(
+      { GEMINI_API_KEY: undefined, OPENAI_API_KEY: undefined, DEEPSEEK_API_KEY: undefined },
+      {
+        readLocalImageOcrRuntime: () => ({
+          engine: 'PaddleOCR',
+          available: false,
+          offlineReady: false,
+          detail: 'not ready',
+        }),
+      },
+    )).toEqual({
       aiProviders: [
         { id: 'gemini', label: 'Google Gemini', configured: false, supportsVision: true },
         { id: 'openai', label: 'OpenAI / ChatGPT', configured: false, supportsVision: true },
         { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
       ],
+      localImageOcr: {
+        engine: 'PaddleOCR',
+        available: false,
+        offlineReady: false,
+        detail: 'not ready',
+      },
     });
   });
 
@@ -81,12 +113,26 @@ describe('runtime config helpers', () => {
         process.env.OPENAI_API_KEY = ' reloaded-openai-key ';
       });
 
-      expect(readRuntimeConfig(process.env, { loadProcessEnv })).toEqual({
+      expect(readRuntimeConfig(process.env, {
+        loadProcessEnv,
+        readLocalImageOcrRuntime: () => ({
+          engine: 'PaddleOCR',
+          available: true,
+          offlineReady: true,
+          detail: 'ready',
+        }),
+      })).toEqual({
         aiProviders: [
           { id: 'gemini', label: 'Google Gemini', configured: false, supportsVision: true },
           { id: 'openai', label: 'OpenAI / ChatGPT', configured: true, supportsVision: true },
           { id: 'deepseek', label: 'DeepSeek', configured: false, supportsVision: false },
         ],
+        localImageOcr: {
+          engine: 'PaddleOCR',
+          available: true,
+          offlineReady: true,
+          detail: 'ready',
+        },
       });
       expect(loadProcessEnv).toHaveBeenCalledTimes(1);
     } finally {

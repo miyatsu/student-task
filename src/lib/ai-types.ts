@@ -21,8 +21,16 @@ export interface AiProviderRuntimeSummary {
   supportsVision: boolean;
 }
 
+export interface LocalImageOcrRuntimeSummary {
+  engine: string;
+  available: boolean;
+  offlineReady: boolean;
+  detail: string;
+}
+
 export interface RuntimeConfig {
   aiProviders: AiProviderRuntimeSummary[];
+  localImageOcr: LocalImageOcrRuntimeSummary;
 }
 
 export type AiChatRole = 'user' | 'model';

@@ -922,10 +922,15 @@ export default function App() {
   const handleExtractText = async (appFile: AppFile) => {
     setExtractingTextId(appFile.id);
     try {
-      const { aiSetupGuideText, extractImageTextWithAi, isAiConfigured, loadAiRuntimeConfig } = await loadAiHelpers();
+      const {
+        extractImageTextWithLocalOcr,
+        isLocalImageOcrAvailable,
+        loadAiRuntimeConfig,
+        localImageOcrSetupText,
+      } = await loadAiHelpers();
       const runtimeConfig = await loadAiRuntimeConfig();
-      if (!isAiConfigured(runtimeConfig)) {
-        alert(aiSetupGuideText);
+      if (!isLocalImageOcrAvailable(runtimeConfig)) {
+        alert(localImageOcrSetupText);
         return;
       }
 
@@ -936,7 +941,7 @@ export default function App() {
         reader.onerror = reject;
       });
 
-      const text = await extractImageTextWithAi({
+      const text = await extractImageTextWithLocalOcr({
         data: base64,
         mimeType: appFile.file.type,
         name: appFile.name,
@@ -953,7 +958,7 @@ export default function App() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error extracting text:', error);
-      alert(error instanceof Error ? error.message : 'AI OCR failed.');
+      alert(error instanceof Error ? error.message : 'Image OCR failed.');
     } finally {
       setExtractingTextId(null);
     }
