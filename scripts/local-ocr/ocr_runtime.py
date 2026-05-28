@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+MAX_OCR_IMAGE_SIDE = 960
 
+
+@lru_cache(maxsize=1)
 def build_ocr():
     if os.environ.get("PCIE_PADDLEOCR_CACHE_DIR"):
         os.environ.setdefault("PADDLE_HOME", os.environ["PCIE_PADDLEOCR_CACHE_DIR"])
@@ -16,6 +20,9 @@ def build_ocr():
 
     return PaddleOCR(
         lang="ch",
+        text_detection_model_name="PP-OCRv5_mobile_det",
+        text_recognition_model_name="PP-OCRv5_mobile_rec",
+        text_det_limit_side_len=MAX_OCR_IMAGE_SIDE,
         use_doc_orientation_classify=False,
         use_doc_unwarping=False,
         use_textline_orientation=False,
@@ -93,8 +100,34 @@ def _extract_lines(value: Any) -> list[str]:
     return lines
 
 
+def _prepare_image_for_ocr(image_path: str | Path) -> None:
+    from PIL import Image
+
+    image_path = Path(image_path)
+
+    with Image.open(image_path) as source_image:
+        largest_side = max(source_image.size)
+        if largest_side <= MAX_OCR_IMAGE_SIDE:
+            return
+
+        resampling: Any = getattr(Image, "Resampling", Image)
+        resample_filter = resampling.LANCZOS
+        scale = MAX_OCR_IMAGE_SIDE / float(largest_side)
+        target_size = (
+            max(1, round(source_image.width * scale)),
+            max(1, round(source_image.height * scale)),
+        )
+        resized_image = source_image.resize(target_size, resample_filter)
+
+        if resized_image.mode not in ("RGB", "L"):
+            resized_image = resized_image.convert("RGB")
+
+        resized_image.save(image_path)
+
+
 def extract_markdown_text_from_path(image_path: str | Path) -> str:
     image_path = str(image_path)
+    _prepare_image_for_ocr(image_path)
     ocr = build_ocr()
 
     prediction = None
