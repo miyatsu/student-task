@@ -73,6 +73,7 @@ AI 与 OCR 配置速览：
 - 支持的 AI provider 默认尝试顺序是 `Gemini -> OpenAI / ChatGPT -> DeepSeek`。如果你同时配置了多个 key，AI 助手会按这个顺序使用首个可完成当前任务的 provider。
 - 获取独立 Key：Gemini 在 Google AI Studio 申请 <https://aistudio.google.com/app/apikey>；OpenAI / ChatGPT 在 OpenAI Platform 申请 <https://platform.openai.com/api-keys>；DeepSeek 在 DeepSeek Platform 申请 <https://platform.deepseek.com/api_keys>。
 - 图片 OCR 不依赖这些 AI key。它通过本地 PaddleOCR 运行时执行；`npm install` 会自动执行 `npm run setup:ocr`，创建项目内的 Python 虚拟环境、安装 PaddlePaddle / PaddleOCR，并预热离线模型。
+- 如需快速验证本地 OCR 运行时本身，可执行 `npm run smoke:ocr`。该命令会补齐本地 PaddleOCR bootstrap、生成一张样例图片，并输出一次真实 OCR 请求的耗时与识别结果预览。
 - 为了让本地 OCR bootstrap 成功，机器上需要预先安装 Python `3.9+`。如果安装阶段因为 Python 缺失或网络原因中断，可以在补齐环境后手动重跑 `npm run setup:ocr`。
 - 本地运行 AI 助手时，在项目根目录创建 `.env` 并写入一个或多个 key，例如 `GEMINI_API_KEY=...`、`OPENAI_API_KEY=...`、`DEEPSEEK_API_KEY=...`，然后执行 `npm run dev`。
 - 如果 `npm run dev` 已经先启动、随后才补建 `.env`，`/api/runtime-config` 会在后续 AI 请求时重新读取该文件；刷新页面或重新打开 AI 助手即可。图片 OCR 的可用性取决于本地 PaddleOCR runtime 是否完成安装。

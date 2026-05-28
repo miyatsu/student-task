@@ -39,6 +39,14 @@ npm run test:app
 
 这些脚本属于开发期验证工具，不纳入 `npm test`。
 
+本地 OCR 诊断有一个固定 smoke 入口：
+
+```bash
+npm run smoke:ocr
+```
+
+该命令会确保 `.local/paddleocr/` bootstrap 可用，生成一张样例图片，并通过真实的 `runLocalImageOcrRequest` 路径输出耗时与 OCR 结果预览。遇到 `LocalOcrRequestError`、Python 环境异常或模型预热问题时，优先执行这条命令。
+
 ## 2. 人工回归清单
 
 ### 模块一：全局文件组织（拖拽与排序）

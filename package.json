@@ -15,6 +15,7 @@
     "preview": "node scripts/run-preview-server.mjs",
     "preview:static": "vite preview",
     "setup:ocr": "node scripts/bootstrap-local-ocr.mjs",
+    "smoke:ocr": "node scripts/local-ocr/run-smoke.mjs",
     "clean": "rm -rf dist",
     "test": "npm run test:logic && npm run test:app",
     "test:logic": "node --import tsx --test src/features/files/file-utils.test.ts",

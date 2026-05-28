@@ -42,6 +42,14 @@ npm install
 npm run setup:ocr
 ```
 
+如需快速验证本地 OCR 运行时是否可用，可执行：
+
+```bash
+npm run smoke:ocr
+```
+
+该命令会补齐本地 PaddleOCR bootstrap、生成一张样例图片，并通过真实的服务端本地 OCR 调度路径输出耗时与识别结果预览。
+
 ## 3. 本地启动
 
 开发模式使用：
@@ -162,6 +170,7 @@ AI 助手失败时，可按以下顺序排查：
 2. `npm install` 或 `npm run setup:ocr` 是否执行成功
 3. `.local/paddleocr/venv` 与 `.local/paddleocr/cache` 是否存在
 4. 是否需要重新执行 `npm run setup:ocr` 补齐 PaddleOCR 与离线模型
+5. 执行 `npm run smoke:ocr`，确认本地 OCR smoke 链路是否可以稳定返回结果
 
 > 不要将 `.env` 或任何计费密钥提交到 Git 仓库。
 

@@ -3,6 +3,7 @@ import path from 'path';
 import readline from 'readline';
 import { spawn } from 'child_process';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
+import { once } from 'events';
 
 import type { AiOcrRequestBody, AiRequestFile, LocalImageOcrRuntimeSummary } from '../lib/ai-types';
 
@@ -301,7 +302,7 @@ async function ensureLocalOcrWorker(rootDir = process.cwd()) {
 
   const stdoutReader = readline.createInterface({ input: child.stdout });
 
-  const worker = {
+  const worker: LocalOcrWorkerHandle = {
     child,
     stdoutReader,
     rootDir,
@@ -311,8 +312,8 @@ async function ensureLocalOcrWorker(rootDir = process.cwd()) {
     disposed: false,
     startupTimer: undefined as unknown as ReturnType<typeof setTimeout>,
     pendingRequests: new Map<string, PendingLocalOcrRequest>(),
-    readyPromise: Promise.resolve(undefined as never),
-  } satisfies LocalOcrWorkerHandle;
+    readyPromise: Promise.resolve(undefined as unknown as LocalOcrWorkerHandle),
+  };
 
   worker.readyPromise = new Promise<LocalOcrWorkerHandle>((resolve, reject) => {
     const settleStartup = (error?: LocalOcrRequestError) => {
@@ -470,6 +471,17 @@ async function executePaddleOcr(request: AiOcrRequestBody, rootDir = process.cwd
 
 export function isLocalOcrRequestError(error: unknown): error is LocalOcrRequestError {
   return error instanceof LocalOcrRequestError;
+}
+
+export async function shutdownLocalOcrWorker() {
+  const worker = localOcrWorker;
+  if (!worker || worker.disposed) {
+    return;
+  }
+
+  const closePromise = once(worker.child, 'close').then(() => undefined).catch(() => undefined);
+  disposeLocalOcrWorker(worker, undefined, true);
+  await closePromise;
 }
 
 export async function runLocalImageOcrRequest(body: unknown, dependencies: LocalImageOcrDependencies = {}) {
