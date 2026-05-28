@@ -59,9 +59,9 @@ export interface AppFile {
 2. 如果某一个源文件报错，界面可以把失败文件名和底层错误一起暴露出来，而不是只显示一个模糊的通用提示。
 
 ### 2.4A 首页工作台入口整合
-首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中改成一个纵向栈式首屏：顶部由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明与 trust notes，并把 `Local-first by default` / `AI only when configured` trust pills 放到标题上方，同时使用 `PDF, Word, and Images in One Local-First Workspace` 作为主标题；最近一轮微调又把这个标题进一步放大，同时保持单行居中，并切换到一枚更柔和的浅蓝色 token。其下的 supporting copy 仍保留两行，但两句现在统一使用同一套字号和行高，其中第二句为 `LLM stays off until you configure a key.`，第一句结尾的 `and export the result.` 继续被包裹为 `nowrap` 片段，避免在窄桌面宽度下单独折到下一行；中间是 capability strip；底部才放置真实的 Workspace Upload 面板，并作为首页唯一的上传入口。
+首页入口现在不再把 Hero 和上传区拆成两个独立的大模块，而是在 `[src/App.tsx](../src/App.tsx)` 中改成一个纵向栈式首屏：顶部由 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 负责产品价值说明与 trust notes，并把 `Local-first by default` / `AI only when configured` trust pills 放到标题上方，同时使用 `PDF, Word, and Images in One Local-First Workspace` 作为主标题；最近一轮微调又移除了包住上中下三段的最外层共享首屏外壳，把页面版心放宽到更大的容器中，只保留 Hero 和下方共享工作区这两个主要块面。标题也随之改成在更宽的横向空间里保持单行居中，并切换到一枚更柔和的浅蓝色 token，不再在右侧被裁切。其下的 supporting copy 仍保留两行，但两句现在统一使用同一套字号和行高，其中第二句为 `LLM stays off until you configure a key.`，第一句结尾的 `and export the result.` 继续被包裹为 `nowrap` 片段，避免在窄桌面宽度下单独折到下一行；中间是 capability strip；底部才放置真实的 Workspace Upload 面板，并作为首页唯一的上传入口。
 
-Phase 1 的结构性调整主要发生在 `[src/App.tsx](../src/App.tsx)`：Hero、Workflow strip、Upload panel 被统一包进一个共享首屏外壳，后两者进一步被收进同一个内层 surface，并通过更紧的垂直节奏和统一边框/背景减少“多块平级卡片”的割裂感。对应地，`[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 里的 `HomeCapabilityStrip` 去掉了原有的外部顶边距，改由首屏组合容器统一控制模块间节奏。
+Phase 1 的结构性调整最初发生在 `[src/App.tsx](../src/App.tsx)`：Hero、Workflow strip、Upload panel 被统一包进一个共享首屏外壳，后两者进一步被收进同一个内层 surface，并通过更紧的垂直节奏和统一边框/背景减少“多块平级卡片”的割裂感。后续的布局收尾又把这一层最外壳拿掉，保留更清爽的纵向结构，但让 Hero 与下方共享工作区直接作为两个相邻块面出现，从而减少层层嵌套带来的压迫感，同时为标题和上传卡片释放更多横向空间。对应地，`[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 里的 `HomeCapabilityStrip` 继续由下方共享工作区统一控制节奏，而不再依赖更外层的组合壳。
 
 Phase 2 的重点回到 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)`：trust pills 改为居中排列，supporting copy 也与主标题共享中心轴；而在最近的后续微调中，Hero 级 `Choose files` CTA 又被移除，避免首页上中下三段同时竞争注意力。这样首屏上半区回到更纯粹的价值表达，真实上传动作则继续收敛在下方唯一的 Workspace Upload 面板里。
 
@@ -69,7 +69,7 @@ Phase 3 继续聚焦 `[src/components/HomeHero.tsx](../src/components/HomeHero.t
 
 Phase 4 回到 `[src/App.tsx](../src/App.tsx)` 中的 `workspace-upload-panel`：上传区的宽度和高度被主动收紧，虚线边框被移除，视觉骨架改成更成熟的实线描边卡片；主操作从“整卡像按钮一样可点”收束为明确的 **Choose files** 按钮，而拖拽则保留为 dropzone 行为和次级提示文案。隐藏 `input[type=file]`、`fileInputRef`、`openFilePicker()`、拖拽处理函数本身都没有变化，只是把动作入口表达得更清晰。最近的细调又把格式胶囊从分离的 `PNG` / `JPG / JPEG` 收束成统一写法 `PNG / JPG / JPEG`，并把底部按钮强调色调整到更柔和的钢蓝色，使它与标题色更协调。
 
-Phase 5 主要落在 `[src/index.css](../src/index.css)` 与首屏相关组件的 class token 上：新增了一组首页用的暖中性色、边框、阴影和深蓝强调色变量，并在 `body` 上切换到本地优先的 sans 字体栈；随后 `[src/App.tsx](../src/App.tsx)` 和 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 统一改用这些 token 控制 top shell、Hero、workflow ribbon、upload panel 和主按钮的视觉语言。这样颜色、阴影和字体就不再靠零散的局部类名拼接，也不会为了首页样式额外引入外部字体请求。
+Phase 5 主要落在 `[src/index.css](../src/index.css)` 与首屏相关组件的 class token 上：新增了一组首页用的暖中性色、边框、阴影和深蓝强调色变量，并在 `body` 上切换到本地优先的 sans 字体栈；随后 `[src/App.tsx](../src/App.tsx)` 和 `[src/components/HomeHero.tsx](../src/components/HomeHero.tsx)` 统一改用这些 token 控制 Hero、workflow ribbon、upload panel 和主按钮的视觉语言。再之后的布局微调又去掉了包裹首屏三段内容的最外层 top shell，只保留更宽的页面版心与两个主要块面。这样颜色、阴影和字体就不再靠零散的局部类名拼接，也不会为了首页样式额外引入外部字体请求，同时首屏也比之前更舒展。
 
 最近又追加了一轮前端打包收束，目标是处理 Vite 在生产构建阶段对超大 chunk 的提示。根因并不是首页 UI 本身，而是 `[src/App.tsx](../src/App.tsx)` 顶层同步导入了 `pdf-lib`、`jszip`、`mammoth`、`browser-image-compression`、Gemini helper，以及几个会继续拉起 `pdfjs-dist` / `tfjs` 的 modal 组件，导致用户即使只是打开首页，也会把后续工具链一起打进主包。
 
