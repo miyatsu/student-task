@@ -9,9 +9,10 @@
 	--home-surface-border: rgba(227, 218, 207, 0.86);
 	--home-ribbon-bg: rgba(247, 243, 237, 0.9);
 	--home-ribbon-border: rgba(225, 216, 205, 0.86);
-	--home-accent: #173d56;
-	--home-accent-hover: #0f3145;
-	--home-accent-soft: rgba(215, 231, 241, 0.95);
+	--home-title: #6689a8;
+	--home-accent: #2d5f7e;
+	--home-accent-hover: #244d67;
+	--home-accent-soft: rgba(220, 233, 243, 0.96);
 	--home-shell-shadow: 0 30px 90px -50px rgba(62, 48, 33, 0.32);
 	--home-soft-shadow: 0 20px 52px -42px rgba(62, 48, 33, 0.22);
 	--home-card-shadow: 0 18px 46px -38px rgba(62, 48, 33, 0.18);

@@ -1091,7 +1091,7 @@ export default function App() {
     <div className="min-h-screen bg-[var(--home-page-bg)] text-slate-950 font-sans selection:bg-stone-200 selection:text-slate-950 pb-32">
       <div className="mx-auto max-w-6xl px-6 py-12 lg:px-8 lg:py-16">
         <section className="space-y-4 rounded-[2.75rem] border border-[color:var(--home-shell-border)] bg-[var(--home-shell-bg)] p-3 shadow-[var(--home-shell-shadow)] sm:p-4 lg:p-5">
-          <HomeHero onChooseFiles={openFilePicker} />
+          <HomeHero />
 
           <div className="rounded-[2.15rem] border border-[color:var(--home-surface-border)] bg-[var(--home-surface-bg)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),var(--home-soft-shadow)] sm:p-5 lg:p-6">
             <HomeCapabilityStrip />
@@ -1124,7 +1124,7 @@ export default function App() {
                 <p className="relative mt-6 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Workspace Upload</p>
 
                 <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-zinc-500">
-                    {['PDF', 'DOC / DOCX', 'PNG', 'JPG / JPEG'].map((item) => (
+                    {['PDF', 'DOC / DOCX', 'PNG / JPG / JPEG'].map((item) => (
                       <span key={item} className="rounded-full border border-zinc-200 bg-white/85 px-3 py-1.5">
                         {item}
                       </span>

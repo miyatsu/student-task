@@ -41,10 +41,6 @@ const capabilities = [
   },
 ];
 
-interface HomeHeroProps {
-  onChooseFiles: () => void;
-}
-
 export function HomeCapabilityStrip() {
   return (
     <section aria-label="Workspace capabilities">
@@ -72,7 +68,7 @@ export function HomeCapabilityStrip() {
   );
 }
 
-export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
+export default function HomeHero() {
   return (
     <header className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top,rgba(233,223,209,0.7),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.94),rgba(250,247,242,0.9))] p-6 shadow-[var(--home-soft-shadow)] sm:p-8 lg:p-10">
       <div className="max-w-6xl">
@@ -87,27 +83,16 @@ export default function HomeHero({ onChooseFiles }: HomeHeroProps) {
           </span>
         </div>
 
-        <h1 className="mx-auto mt-6 max-w-full text-center text-3xl font-extrabold tracking-[-0.035em] text-zinc-950 sm:text-4xl md:text-[1.45rem] md:leading-[1.12] md:whitespace-nowrap lg:text-[1.7rem] xl:text-[1.9rem] 2xl:text-[2.05rem]">
+        <h1 className="mx-auto mt-6 max-w-full text-center text-[clamp(2.1rem,4.3vw,3.1rem)] font-extrabold leading-[1.04] tracking-[-0.05em] text-[color:var(--home-title)] sm:whitespace-nowrap">
           PDF, Word, and Images in One Local-First Workspace
         </h1>
 
-        <div className="mx-auto mt-5 max-w-[56rem] space-y-1 text-center text-base leading-8 text-zinc-600 sm:text-lg">
-          <p className="md:text-[1rem] md:whitespace-nowrap">
+        <div className="mx-auto mt-5 max-w-[62rem] space-y-2 text-center text-[clamp(1rem,1.45vw,1.18rem)] leading-8 text-zinc-600">
+          <p className="sm:whitespace-nowrap">
             Drop mixed files, organize them visually, convert or extract what you need,{' '}
             <span className="whitespace-nowrap">and export the result.</span>
           </p>
-          <p>LLM stays off until you configure a key.</p>
-        </div>
-
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={onChooseFiles}
-            className="inline-flex items-center justify-center rounded-full bg-[var(--home-accent)] px-6 py-3 text-sm font-semibold text-white shadow-[var(--home-card-shadow)] transition-colors hover:bg-[var(--home-accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--home-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-          >
-            Choose files
-          </button>
-          <p className="text-sm text-zinc-500">Open the file picker and continue in the same local-first workspace.</p>
+          <p className="sm:whitespace-nowrap">LLM stays off until you configure a key.</p>
         </div>
 
       </div>
