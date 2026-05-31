@@ -1,5 +1,5 @@
 {
-  "name": "PDF Merger",
-  "description": "A tool to merge multiple PDF files into a single document.",
+  "name": "PCIE",
+  "description": "A local-first document workspace for PDF, image, and Word file processing with optional AI assistance.",
   "requestFramePermissions": []
 }

@@ -16,7 +16,8 @@ Word 转 PDF 支持三类可选链路：
 - `Microsoft Word 原生导出`（`word-com`）：Windows 环境下的最高保真方案，通过 PowerShell 调用 Word COM 自动化。
 - `LibreOffice CLI`（`libreoffice-cli`）：适合跨平台与批处理环境，通过 `soffice --headless --convert-to pdf` 执行。
 - `浏览器 HTML fallback`：不依赖本地 Office 组件的兜底方案，通过 `mammoth`（DOCX）或服务端 `word-extractor`（旧版 `.doc`）提取文本后在浏览器中渲染为 PDF。
-- `docx2pdf`、`pywin32`、UNO / `unoconv` 等 Python 方案本质上是对 Word 或 LibreOffice 的调用包装，项目不做内置集成，用户可按需自行扩展。
+
+此外，`docx2pdf`、`pywin32`、UNO / `unoconv` 等 Python 方案本质上是对 Word 或 LibreOffice 的调用包装，项目不做内置集成，用户可按需自行扩展。
 
 Word 浏览器导出链路使用隐藏宿主容器承载 HTML 内容，使传入 `html2pdf` 的源节点保持在普通文档流中，保证本地渲染与布局稳定性。
 

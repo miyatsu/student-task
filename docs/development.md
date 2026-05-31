@@ -69,7 +69,7 @@ npm run dev
 npm run build
 ```
 
-该命令会生成 `dist/` 前端产物，并打包 `server.ts` 对应的运行时代码。前端构建采用按需加载策略：`PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 通过 `React.lazy()` 拆分，`pdf-lib`、`jszip`、`mammoth`、`browser-image-compression` 与部分浏览器端转换依赖通过 `import()` 运行时加载。Vite 会将 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`@tensorflow/*`、`upscaler` 等依赖拆分为独立 vendor chunk。
+该命令会生成 `dist/` 前端产物。前端构建采用按需加载策略：`PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 通过 `React.lazy()` 拆分，`pdf-lib`、`jszip`、`mammoth`、`browser-image-compression` 与部分浏览器端转换依赖通过 `import()` 运行时加载。Vite 会将 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`@tensorflow/*`、`upscaler` 等依赖拆分为独立 vendor chunk。
 
 ### 4.2 生产预览
 
