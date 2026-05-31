@@ -107,6 +107,22 @@ Backend --> Backend : .doc 文本提取 / PDF 转图 / 压缩任务
 @enduml
 ```
 
+## 4. 软件工程 4+1 视图
+
+本项目已补齐软件工程规范中的 `4+1` 架构视图，独立维护在 [4+1 架构视图文档](./4plus1-views.md) 中，并配套 UML 源码文件放在 `docs/puml/`：
+
+1. 逻辑视图（Logical View）
+2. 开发视图（Development View）
+3. 进程视图（Process View）
+4. 物理视图（Physical View）
+5. 场景视图（Scenarios / Use Case View）
+
+维护约束：
+
+1. 每次涉及前后端边界、运行时部署、核心流程、目录结构或关键用例变化时，必须同步更新 `docs/4plus1-views.md` 与对应 `.puml`。
+2. Pull Request 的描述中应显式说明本次是否影响 4+1 视图；若影响，需列出已更新的图。
+3. 若本次改动不影响视图，也应在 PR 中标注“4+1 视图无需更新”，避免遗漏。
+
 ---
 
 *更具体的实现路线请参考 [技术与实现文档](./implementation.md)。开发与运行方式请参考 [开发环境配置](./development.md)。*

@@ -1,0 +1,33 @@
+@startuml
+node "User Machine" {
+  node "Web Browser\n(React + Vite client)" as Browser
+
+  node "Node.js Process\n(server.ts + Express)" as NodeServer {
+    component "AI Gateway\n(ai.ts)" as AiGateway
+    component "Local OCR Adapter\n(local-ocr.ts)" as LocalOcr
+    component "Runtime Config\n(runtime-config.ts)" as RuntimeCfg
+  }
+
+  node "Python venv\n.local/paddleocr/venv" as PyVenv {
+    component "ocr_runner.py" as OcrRunner
+    component "ocr_runtime.py" as OcrRuntime
+    database "PaddleOCR Model Cache\n.local/paddleocr/cache" as OcrCache
+  }
+
+  folder "Workspace Files\nuploads/, docs/, src/" as Workspace
+}
+
+cloud "External AI Providers" {
+  node "Gemini API" as Gemini
+  node "OpenAI API" as OpenAI
+  node "DeepSeek API" as DeepSeek
+}
+
+Browser --> NodeServer : HTTP localhost:3000/3001
+NodeServer --> PyVenv : local process spawn + stdio
+PyVenv --> OcrCache : read/write models
+NodeServer --> Workspace : read/write temp files
+NodeServer --> Gemini : HTTPS (optional)
+NodeServer --> OpenAI : HTTPS (optional)
+NodeServer --> DeepSeek : HTTPS (optional)
+@enduml

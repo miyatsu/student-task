@@ -1,0 +1,33 @@
+@startuml
+actor User
+participant "Browser UI\n(App.tsx)" as Browser
+participant "Express API\n(server.ts)" as Server
+participant "Local OCR Orchestrator\n(local-ocr.ts)" as OcrNode
+participant "Python Worker\n(ocr_runner.py)" as Worker
+participant "OCR Runtime\n(ocr_runtime.py + PaddleOCR)" as OcrRuntime
+
+User -> Browser : Click "OCR" on image
+Browser -> Server : POST /api/ocr/image(base64 image)
+Server -> OcrNode : runLocalImageOcrRequest()
+
+alt worker already warm
+  OcrNode -> Worker : send request(id,payload)
+else cold start
+  OcrNode -> Worker : spawn python worker
+  Worker -> OcrRuntime : build_ocr() and warm models
+  OcrRuntime --> Worker : ready
+  OcrNode -> Worker : send request(id,payload)
+end
+
+Worker -> OcrRuntime : extract_markdown_text_from_path()
+OcrRuntime --> Worker : text lines
+Worker --> OcrNode : result(id,text)
+OcrNode --> Server : OCR text
+Server --> Browser : 200 { text }
+Browser --> User : Show OCR result
+
+opt timeout or worker crash
+  OcrNode --> Server : LocalOcrRequestError(504/502)
+  Server --> Browser : error response
+end
+@enduml

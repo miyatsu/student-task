@@ -1,0 +1,24 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "终端用户" as User
+
+rectangle "PCIE Workspace" {
+  usecase "UC-01 图片 OCR\n(本地离线)" as UC1
+  usecase "UC-02 Word 转 PDF\n(Word/LibreOffice/HTML fallback)" as UC2
+  usecase "UC-03 多文件 AI 对话\n(provider fallback)" as UC3
+  usecase "UC-04 PDF 页编辑\n删除/提取" as UC4
+  usecase "UC-05 文件批量导出\nZip with dedupe names" as UC5
+}
+
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+
+UC3 ..> UC1 : <<extend>> OCR text as context
+UC5 ..> UC2 : <<include>> converted PDF output
+UC5 ..> UC4 : <<include>> edited PDF output
+@enduml
