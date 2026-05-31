@@ -10,6 +10,7 @@
 - **Node.js**：`v20.19+` 或 `v22.13+`
 - **npm**：随 Node.js 提供的较新版本
 - **Python**：`3.9+`，用于本地 PaddleOCR bootstrap 与运行
+- **Ghostscript**：用于 PDF 压缩功能（`/api/compress/start` 路由依赖 `gs` 命令）
 
 低于上述版本的 Node.js 不受支持。图片 OCR 依赖本地 PaddleOCR runtime，因此开发机和演示机都需要具备可调用的 Python。
 
@@ -68,7 +69,7 @@ npm run dev
 npm run build
 ```
 
-该命令会生成 `dist/` 前端产物，并打包 `server.ts` 对应的运行时代码。前端构建采用按需加载策略：`PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 通过 `React.lazy()` 拆分，`pdf-lib`、`jszip`、`mammoth`、`browser-image-compression` 与部分浏览器端转换依赖通过 `import()` 运行时加载。Vite 会将 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`@tensorflow/*`、`upscaler` 等依赖拆分为独立 vendor chunk。
+该命令会生成 `dist/` 前端产物。前端构建采用按需加载策略：`PdfEditor`、`AiAssistant`、`ImageEnhanceModal`、`FilePreview` 通过 `React.lazy()` 拆分，`pdf-lib`、`jszip`、`mammoth`、`browser-image-compression` 与部分浏览器端转换依赖通过 `import()` 运行时加载。Vite 会将 `pdf-lib`、`pdfjs-dist`、`mammoth`、`html2canvas`、`@tensorflow/*`、`upscaler` 等依赖拆分为独立 vendor chunk。
 
 ### 4.2 生产预览
 

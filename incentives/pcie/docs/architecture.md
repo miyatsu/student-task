@@ -1,6 +1,6 @@
 # 架构设计文档
 
-本项目是一个前端重度驱动的 Web 文档工作区。浏览器承担主要的文件处理与交互职责，本地 Node 服务负责少量需要宿主机能力的任务，包括 AI gateway、PDF 压缩、旧版 `.doc` 提取与本地 PaddleOCR 调度。
+本项目是一个前端重度驱动的 Web 文档工作区。浏览器承担主要的文件处理与交互职责，本地 Node 服务负责少量需要宿主机能力的任务，包括 AI gateway、PDF 压缩、Word 原生 PDF 导出、旧版 `.doc` 提取、mupdf PDF 转图与本地 PaddleOCR 调度。
 
 ## 1. 技术栈选型
 
@@ -22,11 +22,12 @@
 [server.ts](../server.ts) 提供基于 `express` 的本地服务端，使用进程内 `Map` 跟踪短生命周期作业状态。该服务端负责：
 
 1. 文件上传与辅助接口流转
-2. PDF 压缩与转图任务
-3. 旧版 `.doc` 文本提取
-4. 本地 `/api/ocr/image` PaddleOCR 调度
-5. `/api/ai/chat` AI gateway 调用
-6. `/api/runtime-config` 运行时摘要输出
+2. PDF 压缩（Ghostscript）与 mupdf PDF 转图（SVG / PNG）任务
+3. 原生 Word PDF 导出（Word COM / LibreOffice CLI）
+4. 旧版 `.doc` 文本提取
+5. 本地 `/api/ocr/image` PaddleOCR 调度
+6. `/api/ai/chat` AI gateway 调用
+7. `/api/runtime-config` 运行时摘要输出
 
 `/api/runtime-config` 只返回“哪些 AI provider 已配置”与“本地 OCR runtime 是否就绪”的摘要，不向浏览器暴露原始第三方 API key。开发模式下，Vite 中间件与 HMR WebSocket 统一挂载到同一个 HTTP Server 上，并在默认端口被占用时自动选择下一个可用端口。
 
@@ -52,11 +53,12 @@
 
 ### 2.3 服务端辅助模块
 
-- `src/server/compression.ts`：PDF 压缩参数拼装
+- `src/server/compression.ts`：PDF 压缩等级映射、任务 ID 生成与 Ghostscript 命令拼装
 - `src/server/runtime-config.ts`：运行时配置摘要读取
 - `src/server/ai.ts`：AI provider 顺序尝试、能力判断与对话请求组装
 - `src/server/local-ocr.ts`：本地 PaddleOCR runtime 状态探测与图片 OCR 调度
 - `src/server/word-conversion.ts`：旧版 `.doc` 文本提取、HTML 转义与结构化包装
+- `src/server/word-pdf-native.ts`：原生 Word→PDF 转换后端（Word COM、LibreOffice CLI）的探测与执行
 
 ## 3. 架构视图
 
