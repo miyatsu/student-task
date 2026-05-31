@@ -1,0 +1,50 @@
+@startuml
+skinparam componentStyle rectangle
+
+package "Client Layer" {
+  [App.tsx] as App
+  [AiAssistant] as AiAssistant
+  [PdfEditor] as PdfEditor
+  [ImageEnhanceModal] as ImageEnhanceModal
+  [FilePreview] as FilePreview
+  [file-utils.ts] as FileUtils
+  [word-pdf.ts] as WordPdf
+}
+
+package "Server Layer" {
+  [server.ts] as Server
+  [runtime-config.ts] as RuntimeConfig
+  [ai.ts] as AiGateway
+  [local-ocr.ts] as LocalOcr
+  [word-conversion.ts] as WordConversion
+  [compression.ts] as Compression
+}
+
+package "Local Runtime" {
+  [ocr_runner.py] as OcrRunner
+  [ocr_runtime.py] as OcrRuntime
+  [PaddleOCR Engine] as Paddle
+}
+
+App --> AiAssistant
+App --> PdfEditor
+App --> ImageEnhanceModal
+App --> FilePreview
+App --> FileUtils
+App --> WordPdf
+
+AiAssistant --> Server : /api/ai/chat
+App --> Server : /api/ocr/image
+WordPdf --> Server : /api/word/extract-html
+PdfEditor --> Server : /api/pdf/*
+
+Server --> RuntimeConfig
+Server --> AiGateway
+Server --> LocalOcr
+Server --> WordConversion
+Server --> Compression
+
+LocalOcr --> OcrRunner
+OcrRunner --> OcrRuntime
+OcrRuntime --> Paddle
+@enduml

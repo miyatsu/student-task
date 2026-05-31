@@ -1,0 +1,67 @@
+@startuml
+skinparam packageStyle rectangle
+
+package "Repository: pdf-merger" {
+  package "src/" {
+    package "components/" {
+      [AiAssistant.tsx]
+      [PdfEditor.tsx]
+      [ImageEnhanceModal.tsx]
+      [FilePreview.tsx]
+    }
+
+    package "features/files/" {
+      [types.ts]
+      [file-utils.ts]
+      [word-pdf.ts]
+      package "components/" {
+        [ImageFilesSection]
+        [PdfFilesSection]
+        [WordFilesSection]
+        [ConversionProgressCard]
+      }
+    }
+
+    package "server/" {
+      [ai.ts]
+      [local-ocr.ts]
+      [runtime-config.ts]
+      [word-conversion.ts]
+      [compression.ts]
+    }
+
+    [App.tsx]
+    [main.tsx]
+  }
+
+  package "scripts/local-ocr/" {
+    [warmup.py]
+    [ocr_runner.py]
+    [ocr_runtime.py]
+    [make-smoke-image.py]
+    [run-smoke.mjs]
+    [smoke-local-ocr.mts]
+  }
+
+  package "docs/" {
+    [architecture.md]
+    [4plus1-views.md]
+    package "puml/" {
+      [4plus1-*.puml]
+    }
+  }
+}
+
+[App.tsx] --> [types.ts]
+[App.tsx] --> [file-utils.ts]
+[App.tsx] --> [AiAssistant.tsx]
+[App.tsx] --> [PdfEditor.tsx]
+[App.tsx] --> [ImageEnhanceModal.tsx]
+[App.tsx] --> [FilePreview.tsx]
+
+[ai.ts] --> [runtime-config.ts]
+[local-ocr.ts] --> [ocr_runner.py]
+[ocr_runner.py] --> [ocr_runtime.py]
+[run-smoke.mjs] --> [make-smoke-image.py]
+[run-smoke.mjs] --> [smoke-local-ocr.mts]
+@enduml
