@@ -10,6 +10,7 @@
 - **Node.js**：`v20.19+` 或 `v22.13+`
 - **npm**：随 Node.js 提供的较新版本
 - **Python**：`3.9+`，用于本地 PaddleOCR bootstrap 与运行
+- **Ghostscript**：用于 PDF 压缩功能（`/api/compress/start` 路由依赖 `gs` 命令）
 
 低于上述版本的 Node.js 不受支持。图片 OCR 依赖本地 PaddleOCR runtime，因此开发机和演示机都需要具备可调用的 Python。
 
